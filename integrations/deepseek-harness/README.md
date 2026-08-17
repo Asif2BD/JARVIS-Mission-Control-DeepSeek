@@ -2,7 +2,7 @@
 
 Connect a [DeepSeek-Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) agent to the Mission Control board: every dsh session becomes a task, turns and tool calls stream into the activity log, and the agent shows up on the dashboard like any other Mission Control agent.
 
-> **Experimental.** dsh is a v0.1 developer preview and its plugin API may change. Event names are configurable so upstream renames are a config fix. Full analysis and design rationale: [`docs/deepseek-harness-integration.md`](../../docs/deepseek-harness-integration.md).
+> **Experimental — but validated.** The plugin's event names, listener signature, and payload paths are verified against the shipped type definitions of `@deepseek-ai/dsh@0.1.0-rc.7`, and covered by a committed test suite (`npm test`, 16 tests). dsh is still a developer preview, so event names remain config-overridable. Full analysis and design rationale: [`docs/deepseek-harness-integration.md`](../../docs/deepseek-harness-integration.md).
 
 ## How It Works
 
@@ -20,11 +20,14 @@ Connect a [DeepSeek-Harness](https://github.com/deepseek-ai/deepseek-harness) (`
 
 | dsh event | Mission Control effect |
 |---|---|
-| first `turn/start` of a session | Task created (`IN_PROGRESS`, assigned to the harness agent) |
-| `user/message` | Activity log entry |
+| `session/created` (or first `turn/start`) | Task created (`IN_PROGRESS`, assigned to the harness agent) |
+| `user/message` | Activity log entry (flattened `ContentBlock[]` excerpt) |
 | `assistant/message` | Activity log entry |
-| `tool/call` / `tool/result` | Activity log entries |
-| `turn/end` | Task moved to `REVIEW` (never `DONE` — humans approve) |
+| `tool/call` / `tool/result` | Activity log entries (tool name; error name/code on failure) |
+| `turn/end` reason `completed` | Task → `REVIEW` (never `DONE` — humans approve) |
+| `turn/end` reason `blocked` / `failed` | Task → `BLOCKED` (structured error logged) |
+| `turn/end` reason `aborted` / `interrupted` | Task → `ASSIGNED` |
+| `session/flush` | Awaited bounded flush of the plugin's HTTP queue |
 
 ## Quickstart
 
@@ -58,6 +61,8 @@ npx @deepseek-ai/dsh web
 | `missionControlUrl` | `http://localhost:3000` | Mission Control server base URL |
 | `agentId` | `agent-dsh` | Agent ID registered on the board (must match `^[a-zA-Z0-9-_]+$`) |
 | `agentName` | `DeepSeek Harness` | Display name |
+| `authToken` | env `MC_AGENT_TOKEN` | Bearer token sent as `Authorization` on every request |
+| `flushTimeoutMs` | `10000` | Upper bound for the awaited queue flush on `session/flush` and unload |
 | `designation` | `Harnessed Agent` | Dashboard designation |
 | `capabilities` | `["coding","automation"]` | Capability tags |
 | `maxExcerpt` | `280` | Max characters of message/tool content forwarded to logs |

@@ -1,6 +1,6 @@
 # DeepSeek-Harness Integration — Analysis & Guide
 
-> Status: **Experimental** (DeepSeek-Harness is a v0.1 developer preview; its plugin API may change)
+> Status: **Experimental, validated against `@deepseek-ai/dsh@0.1.0-rc.7`** — event names, the `(session, event)` listener signature, the `{type, seq, time, data}` wrapper, and the `turn/end` reason kinds were all confirmed against the shipped type definitions; the plugin ships with a committed test suite built on those shapes.
 > Companion code: [`integrations/deepseek-harness/`](../integrations/deepseek-harness/)
 
 This document answers three questions:
