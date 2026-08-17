@@ -1,353 +1,103 @@
-# JARVIS Mission Control for OpenClaw
+# JARVIS Mission Control for DeepSeek-Harness
 
 [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen.svg)](CHANGELOG.md)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![DeepSeek-Harness](https://img.shields.io/badge/runtime-dsh%200.1.0--rc.7-4A5BD4.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![MissionDeck](https://img.shields.io/badge/platform-missiondeck.ai-blue.svg)](https://missiondeck.ai)
 
-**The open-source AI agent orchestration system — built for [MissionDeck.ai](https://missiondeck.ai)**
+**The open-source AI agent orchestration board, connected to [DeepSeek-Harness](https://github.com/deepseek-ai/deepseek-harness).**
 
-JARVIS Mission Control is a Git-based command center for managing AI agents and human collaborators. Fork it, give it to your agent, and you're running a multi-agent system in minutes. Pair it with [MissionDeck.ai](https://missiondeck.ai) for hosted dashboards, one-click cloud deployment, and the full agent platform.
+JARVIS Mission Control is a Git-based command center for managing AI agents and human collaborators: a live Kanban board, task manager, activity log, messaging layer, and review workflow — backed by plain JSON files and a Node.js server. This edition connects it to **DeepSeek-Harness (`dsh`)**, the plugin-kernel agent harness from DeepSeek: every dsh session appears as a task on your board, every turn and tool call streams into the activity log, and finished work lands in `REVIEW` for a human to approve.
 
-| Current Version | Status | Last Updated |
-|-----------------|--------|--------------|
-|  **2.1.0** | Stable | 2026-06-21 |
-
-> **This is a TEMPLATE repository.** Fork or clone it to create your own Mission Control instance.
+> **Status: Experimental.** dsh is a v0.1 developer preview with announced breaking changes. The bridge is validated against `@deepseek-ai/dsh@0.1.0-rc.7` type definitions and covered by committed tests; event names are config-overridable so upstream renames are a config fix. This repo is a sibling of [JARVIS-Mission-Control-OpenClaw](https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw) — same engine, different agent runtime.
 
 ---
 
-## 🎯 Pick Your Setup Mode
+## How It Connects
 
-> Not sure where to start? Use this table to decide in seconds.
+`dsh` treats everything as a plugin and broadcasts every model-visible moment on an append-only session event stream. Our bridge mounts *inside* the harness as a [Cordis](https://cordis.io) plugin and forwards that stream to Mission Control's REST API — no polling, no log scraping, no server changes:
 
-| Mode | Best For | Dashboard URL | Setup Time |
-|------|----------|--------------|------------|
-| **👁️ Demo (no account)** | Just exploring | [`missiondeck.ai/mission-control/demo`](https://missiondeck.ai/mission-control/demo) | 0 minutes |
-| **☁️ Cloud (MissionDeck)** | Teams, persistent workspace | `https://missiondeck.ai/mission-control/your-slug` | 5 minutes |
-| **🖥️ Self-Hosted (local)** | Full control, offline | `http://localhost:3000` | 10 minutes |
-
-**For cloud access, you need:**
-1. A free account at [missiondeck.ai/auth](https://missiondeck.ai/auth) (no credit card)
-2. An API key from your workspace settings
-3. Run: `./scripts/connect-missiondeck.sh --api-key YOUR_KEY`
-
-**For local setup, you need:**
-1. Node.js ≥18 + Git
-2. Fork & clone this repo
-3. Run: `cd server && npm install && npm start`
-4. Open: `http://localhost:3000`
-
----
-
----
-
-## ⭐ Get Started with MissionDeck (Recommended)
-
-MissionDeck is the platform built around this open-source engine. It gives you:
-
-### 🚀 One-Click Agent Deployment
-Deploy a fully configured OpenClaw agent in 60 seconds — no SSH, no server setup.
-
-**→ [missiondeck.ai/deploy](https://missiondeck.ai/deploy)**
-
-Two deployment paths:
-
-**🌩️ Orgo Cloud** — Managed virtual machines, free tier available
-- Zero infrastructure to manage
-- Free tier: 4GB RAM / 4 CPU cores
-- Connect your [Orgo API key](https://orgo.host/signup?ref=missiondeck) and go
-
-**🖥️ Bring Your Own Server (BYOS)** — Any Linux VPS or dedicated server
-- Works with DigitalOcean, Hetzner, Vultr, Linode, OVH, bare metal — anything with SSH
-- Enter your server IP, username, and password (or SSH key)
-- MissionDeck connects, installs Node.js + OpenClaw, writes your config, starts the gateway
-- **AI-assisted recovery** — if any install step fails, Claude automatically rewrites and retries it
-
-### 🤖 Agent Builder
-Design your agents visually at **[missiondeck.ai/agent-builder](https://missiondeck.ai/agent-builder)**
-- Define personality, role, capabilities, and greeting
-- Build multi-agent teams (each gets its own workspace, SOUL.md, IDENTITY.md)
-- Deploy the whole team with one click — Telegram routing configured automatically
-
-### 🌐 Hosted Dashboard
-Your Mission Control board, live on the internet:
 ```
-https://missiondeck.ai/mission-control/your-slug
+┌────────────── dsh ──────────────┐        ┌──── Mission Control ────┐
+│ agent loop → session event log  │        │ server (localhost:3000) │
+│        │                        │  HTTP  │   POST /api/tasks       │
+│        └─► mission-control ─────┼───────►│   PATCH /api/tasks/:id  │
+│            plugin (this repo)   │        │   POST /api/logs/...    │
+└─────────────────────────────────┘        │   → dashboard + WS      │
+                                           └─────────────────────────┘
 ```
-No server. No port-forwarding. Local `.mission-control/` data auto-syncs to the cloud in real-time.
 
-Access control: Public / Passcode / Authenticated / Private
-
-### 💳 Pricing
-
-| Plan | Price | Deployments | VM Specs |
-|------|-------|-------------|----------|
-| **Free** | $0 | 1 active deployment | 4GB RAM / 4 cores |
-| **Starter** | $20/mo | 5 active deployments | 8GB RAM / 4 cores |
-| **Pro** | $99/mo | Unlimited | 16GB RAM / 8 cores |
-
-BYOS (your own server) works on all plans including free.
-
-**→ [Sign up free at missiondeck.ai](https://missiondeck.ai)**
-
----
+| dsh event | Board effect |
+|---|---|
+| `session/created` | Task created (`IN_PROGRESS`, assigned to the harness agent) |
+| `user/message`, `assistant/message` | Activity log excerpts |
+| `tool/call`, `tool/result` | Activity log entries (with error codes) |
+| `turn/end` → `completed` | Task → `REVIEW` — humans approve to `DONE` |
+| `turn/end` → `blocked` / `failed` | Task → `BLOCKED`, structured error logged |
+| `turn/end` → `aborted` / `interrupted` | Task → `ASSIGNED` |
 
 ## Quick Start
 
-### Option A: Use MissionDeck (Easiest — no server needed)
+```bash
+# 1. Fork and clone this repo
+git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-DeepSeek.git
+cd JARVIS-Mission-Control-DeepSeek
+
+# 2. Start the Mission Control server + dashboard
+cd server && npm install && npm start        # → http://localhost:3000
+
+# 3. Install the bridge plugin into your dsh environment
+npm install ./integrations/deepseek-harness/dsh-plugin-mission-control
+
+# 4. Mount it in your dsh profile (cordis.patch.yml or equivalent)
+#    - name: dsh-plugin-mission-control
+#      config:
+#        missionControlUrl: http://localhost:3000
+#        agentId: agent-dsh
+
+# 5. Run DeepSeek-Harness
+npx @deepseek-ai/dsh web                     # → http://127.0.0.1:3080
+```
+
+Open the board at `http://localhost:3000` and start a dsh session — the task appears as soon as the session does.
+
+**Full setup, config reference, and troubleshooting:** [`integrations/deepseek-harness/README.md`](integrations/deepseek-harness/README.md)
+**Architecture analysis and design rationale:** [`docs/deepseek-harness-integration.md`](docs/deepseek-harness-integration.md)
+
+## What's in the Box
+
+| Piece | Path | What it does |
+|---|---|---|
+| **Dashboard** | `dashboard/` | Kanban board, agent profiles, chat, activity feed, WebSocket live updates |
+| **Server** | `server/` | Express + WebSocket API over `.mission-control/` JSON files |
+| **dsh bridge** | `integrations/deepseek-harness/` | The Cordis plugin (`dsh-plugin-mission-control`) with its test suite |
+| **Data** | `.mission-control/` | Tasks, agents, humans, messages — Git-versioned JSON, no database |
+| **Skills** | `skills/` | Modular agent instructions, including the [dsh bridge skill](skills/deepseek-harness.md) |
+| **Scripts** | `scripts/` | Setup helpers (`add-agent.sh`, `add-human.sh`, `init-mission-control.sh`, …) |
+
+The plugin ships with **auth support** (`MC_AGENT_TOKEN` / `authToken` → `Authorization: Bearer`), a **serialized retry queue** so a dead board never blocks the agent loop, and an **awaited bounded `flush()`** wired to dsh's `session/flush` durability checkpoint.
 
 ```bash
-# 1. Fork this repo to your GitHub account
+# Run the bridge's test suite (16 tests: rc.7 event fixtures + mock HTTP)
+cd integrations/deepseek-harness/dsh-plugin-mission-control && npm test
+```
 
-# 2. Clone your fork
-git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-OpenClaw.git
-cd JARVIS-Mission-Control-OpenClaw
+## MissionDeck Platform
 
-# 3. Get your free API key at missiondeck.ai/auth, then connect
+This open-source repo is the engine. [MissionDeck.ai](https://missiondeck.ai) is the platform around it — hosted dashboards (`missiondeck.ai/mission-control/your-slug`), visual agent building, and one-click deployment. A free API key from [missiondeck.ai/auth](https://missiondeck.ai/auth) connects your instance:
+
+```bash
 ./scripts/connect-missiondeck.sh --api-key YOUR_KEY
-
-# 4. Initialize Mission Control
-./scripts/init-mission-control.sh
-
-# 5. Your dashboard is live at missiondeck.ai/workspace/your-slug
 ```
 
-Then deploy your agents at **[missiondeck.ai/deploy](https://missiondeck.ai/deploy)** — choose Orgo Cloud or your own VPS.
+## Heritage & Roadmap
 
-### Option B: Self-Hosted (Local server)
+This repo is a port of [JARVIS-Mission-Control-OpenClaw](https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw) (v2.1.0). The board, server, and data model are runtime-agnostic and carry over intact; the OpenClaw-specific bridges (`server/agent-bridge.js`, `server/openclaw-sessions.js`, Telegram session parsing) are still present and will be replaced or made optional as the dsh integration matures. See the repo issues for the port roadmap:
 
-```bash
-# 1. Fork and clone
-git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-OpenClaw.git
-cd JARVIS-Mission-Control-OpenClaw
-
-# 2. Initialize
-./scripts/init-mission-control.sh
-
-# 3. Start the server
-cd server && npm install && npm start
-
-# 4. Open the dashboard
-# http://localhost:3000
-```
-
-### For AI Agents
-
-Give your agent this instruction:
-
-```
-Fork https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw to my GitHub account,
-get a free API key from missiondeck.ai/auth, connect it with ./scripts/connect-missiondeck.sh,
-then read CLAUDE.md to learn how it works and set up Mission Control for my project.
-```
-
----
-
-## 🔑 Get Your Free API Key
-
-1. Go to **[missiondeck.ai/auth](https://missiondeck.ai/auth)**
-2. Sign up with your email — no credit card required for free tier
-3. Copy your API key from the dashboard
-4. Run: `./scripts/connect-missiondeck.sh --api-key YOUR_KEY`
-
----
-
-## What's Included (Open Source)
-
-### `mc` CLI — Agent Command-Line Interface
-
-Agents manage tasks from the command line — works in local mode and cloud mode (auto-detects MissionDeck connection):
-
-```bash
-mc check                            # My pending tasks
-mc tasks --status IN_PROGRESS       # Filter tasks
-mc task:status task-123 DONE        # Update status
-mc task:comment task-123 "Done ✓"   # Add comment
-mc task:create --title "Fix auth"   # Create task
-mc deliver task-123 "Report" --path ./report.md
-mc subtask:add task-123 "Write tests"
-mc squad                            # All agent statuses
-mc notify "Deployment complete"     # Send Telegram notification
-mc status                           # Show connection mode (local / cloud)
-```
-
-### Dashboard Features
-
-- **Kanban board** — drag-and-drop task management
-- **Agent profiles** — personality, skills, activity timeline
-- **Dashboard chat** — talk to agents from the browser
-- **Inter-agent messages** — visible conversations between agents
-- **Real-time updates** — WebSocket sync across all clients
-- **GitHub Pages support** — static read-only deploy, zero server
-
-### Security (v1.6.0–1.7.0)
-
-- **CSRF protection** — token-based, smart bypass for API/CLI clients (no cookie = no forging risk)
-- **Rate limiting** — 100 req/min general, 10 req/min on credential/config routes
-- **Input sanitization** — DOMPurify + sanitizeInput on all surfaces
-- **SSRF protection** — webhook URL validation blocks private IPs and metadata endpoints
-
-### Agent Intelligence (v1.2.0–1.5.0)
-
-- **Claude Code sessions** — auto-discovers `~/.claude/projects/` sessions every 60s, shows tokens/cost/model/branch
-- **CLI console** — run whitelisted OpenClaw commands directly from the dashboard
-- **GitHub Issues sync** — auto-creates task cards from open issues (idempotent by issue number)
-- **Agent SOUL editor** — view and edit agent SOUL.md / MEMORY.md / IDENTITY.md in-browser
-
-### Observability & Reliability (v1.9.0–1.14.0)
-
-- **Pino structured logging** — JSON in prod, pretty-print in dev; replaces all console.log
-- **Webhook retry** — SQLite-backed delivery log, exponential backoff (1s→2s→4s→8s→16s), circuit breaker (≥3 failures = open)
-- **Delivery history** — per-webhook slide-out panel with manual retry + circuit reset buttons
-- **Update banner** — notified in dashboard when a newer version is available on npm
-
-### Dashboard Widgets (v1.15.0)
-
-- **Aggregate metrics** in the header: Claude session count, CLI connections, GitHub sync status, webhook health
-- All widgets clickable (open respective panel), color-coded, auto-refresh every 60s
-
-### Test Suite (v1.12.0)
-
-- **51 tests** (Jest) covering CSRF, rate limiting, webhook retry, Claude session parsing, GitHub sync
-- Run: `npm test`
-
-
-
-### OpenClaw Integration
-
-Mission Control auto-discovers your OpenClaw agents on startup. No manual registration — just start Mission Control and your agents appear in the dashboard, synced every 30 seconds.
-
-### MissionDeck Cloud Sync
-
-```bash
-./scripts/connect-missiondeck.sh   # One-time setup
-```
-
-After that, every task change syncs to your hosted dashboard automatically.
-
----
-
-## Initialization Modes
-
-```bash
-# Interactive (recommended)
-./scripts/init-mission-control.sh
-
-# Clean start — no demo data
-./scripts/init-mission-control.sh --production
-
-# Matrix-themed examples — great for learning
-./scripts/init-mission-control.sh --demo
-```
-
----
-
-## Skills Reference
-
-| Skill | File | Description |
-|-------|------|-------------|
-| **MissionDeck Platform** | `skills/missiondeck-api.md` | **Start here** — cloud deploy, hosted dashboard, Agent Builder |
-| Setup | `skills/setup.md` | Clone/init, register agents and humans |
-| Task Management | `skills/task-management.md` | Create, claim, complete tasks |
-| Messaging | `skills/messaging.md` | Direct messages, chat, threads |
-| Dashboard | `skills/dashboard.md` | Server modes, API, GitHub Pages |
-| Orchestration | `skills/orchestration.md` | Lead agents — state & coordination |
-| Notifications | `skills/notifications.md` | Webhooks, WebSocket, polling |
-| Review | `skills/review.md` | Approvals and permission model |
-| Deployment | `skills/deployment.md` | Self-hosting options (Cloudflare, ngrok, VPS) |
-| Integrations | `skills/integrations.md` | Telegram, Slack, Discord |
-| Telegram Bridge | `skills/telegram-bridge.md` | Telegram bot integration |
-
----
-
-## Project Structure
-
-```
-JARVIS-Mission-Control-OpenClaw/
-├── README.md                    # This file
-├── CLAUDE.md                    # Agent skill file (read this first!)
-├── INIT.md                      # First-time initialization guide
-├── CHANGELOG.md                 # Version history
-├── .mission-control/            # Core data directory (starts empty)
-│   ├── config.yaml              # System configuration
-│   ├── STATE.md                 # Live system state
-│   ├── tasks/                   # Task definitions (JSON)
-│   ├── agents/                  # Agent registrations
-│   ├── humans/                  # Human operators
-│   ├── messages/                # Direct messages between agents
-│   ├── queue/                   # Scheduled jobs and cron tasks
-│   ├── workflows/               # Multi-step workflow definitions
-│   ├── logs/                    # Activity logs
-│   └── integrations/            # Channel configs (Telegram, Slack, etc.)
-├── server/                      # Backend server (Node.js)
-├── dashboard/                   # Web dashboard (HTML/CSS/JS)
-├── skills/                      # Modular skill definitions
-├── scripts/                     # Utility scripts
-├── cli/                         # mc CLI source
-├── examples/                    # Demo data and templates
-└── docs/                        # Extended documentation
-```
-
----
-
-## How It Works
-
-### File-Based Database
-All data stored as JSON in `.mission-control/`. Git-versioned, agent-friendly, no database required.
-
-### Task Lifecycle
-```
-INBOX → ASSIGNED → IN_PROGRESS → REVIEW → DONE
-  └─────────────────────────────────────────── BLOCKED (any stage)
-```
-
-### Multi-Agent Coordination
-1. Agents registered in `.mission-control/agents/`
-2. Tasks assigned via `assignee` field
-3. Agents claim tasks by setting status to `IN_PROGRESS`
-4. Progress logged via task comments
-5. Completion triggers workflow advancement
-
-### Real-Time Updates
-WebSocket server pushes changes to all connected dashboards instantly when any agent modifies a file via Git.
-
----
-
-## Security
-
-JARVIS Mission Control has undergone a full security audit by the Matrix Zion Security Counsel (Morpheus).
-
-| Version | Findings Fixed | Method |
-|---------|---------------|--------|
-| v1.0.9 | 47 XSS + 17 injection risks | DOMPurify + `sanitizeInput()` |
-| v1.1.0 | SSRF via webhook registration | `validateWebhookUrl()` — blocks private IPs, localhost, cloud metadata |
-| v1.1.0 | 33 HIGH: injection, path traversal, XSS | `sanitizeId()` + DOMPurify defence-in-depth |
-
-**Current status: 0 HIGH, 0 CRITICAL findings.**
-
-## Contributing
-
-Both humans and AI agents can contribute. See `docs/DEVELOPMENT_GUIDE.md` for commit conventions, PR workflow, and task claiming.
-
----
+1. Live end-to-end validation with a real `DEEPSEEK_API_KEY`
+2. Replace/gate the OpenClaw-specific server bridges
+3. Publish `dsh-plugin-mission-control` to npm with the `dsh-plugin` topic + CI against a pinned dsh release
 
 ## License
 
-Apache 2.0 — See [LICENSE](LICENSE)
-
----
-
-## Links
-
-| | |
-|--|--|
-| 🌐 Platform | [missiondeck.ai](https://missiondeck.ai) |
-| 🚀 Deploy agents | [missiondeck.ai/deploy](https://missiondeck.ai/deploy) |
-| 🤖 Agent Builder | [missiondeck.ai/agent-builder](https://missiondeck.ai/agent-builder) |
-| 📋 Changelog | [missiondeck.ai/changelog](https://missiondeck.ai/changelog) |
-| 🔑 Get API key | [missiondeck.ai/auth](https://missiondeck.ai/auth) |
-| 📦 Open Source | [github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw](https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw) |
-
----
-
-*Built with ❤️ by [M Asif Rahman](https://masifrahman.com) — powered by [OpenClaw](https://openclaw.ai)*
+[MIT](LICENSE) — free to use, fork, and build on.

@@ -2,20 +2,24 @@
  * dsh-plugin-mission-control
  *
  * DeepSeek-Harness (dsh) plugin that mirrors harness activity onto a JARVIS
- * Mission Control board. It subscribes to the durable `session/event` stream
- * and forwards task-relevant moments to Mission Control's REST API:
+ * Mission Control board. Payload shapes follow @deepseek-ai/dsh 0.1.0-rc.7:
+ * session events arrive as `{ type, seq, time, data }` wrappers on the
+ * `session/event` channel with the listener signature `(session, event)`.
  *
- *   first turn/start of a session → task created (IN_PROGRESS)
- *   turn/start                    → status kept IN_PROGRESS + activity log
- *   user/message                  → activity log excerpt
- *   assistant/message             → activity log excerpt
- *   tool/call, tool/result        → activity log entries
- *   turn/end                      → task moved to REVIEW (never DONE —
- *                                   Mission Control reserves DONE for humans)
+ *   session/created               → task created (IN_PROGRESS)
+ *   turn/start                    → task kept IN_PROGRESS + activity log
+ *   user/message                  → activity log excerpt (data.content blocks)
+ *   assistant/message             → activity log excerpt (data.message.content)
+ *   tool/call, tool/result        → activity log entries (data.name / data.error)
+ *   turn/end                      → status from data.reason.kind:
+ *                                     completed → REVIEW (humans approve DONE)
+ *                                     blocked | failed → BLOCKED
+ *                                     aborted | interrupted → ASSIGNED
+ *   session/flush                 → awaited bounded flush of the HTTP queue
  *
- * dsh is a v0.1 developer preview: event names are overridable via config and
- * payloads are read defensively, so upstream renames degrade to config fixes
- * and unknown shapes degrade to log lines instead of crashes.
+ * Event names remain overridable via config for future preview renames, and
+ * payload reads fall back defensively so unknown shapes degrade to log lines
+ * instead of crashing the harness.
  */
 
 import { MissionControlClient } from './mc-client.js';
@@ -24,16 +28,19 @@ export const name = 'dsh-plugin-mission-control';
 
 export const defaultConfig = {
   missionControlUrl: 'http://localhost:3000',
+  authToken: null, // falls back to env MC_AGENT_TOKEN
   agentId: 'agent-dsh',
   agentName: 'DeepSeek Harness',
   designation: 'Harnessed Agent',
   capabilities: ['coding', 'automation'],
   maxExcerpt: 280,
+  flushTimeoutMs: 10_000,
   dryRun: false,
-  // Durable session events, per docs/architecture.md of deepseek-harness.
-  // Override any of these if a future preview renames them.
   events: {
     channel: 'session/event',
+    sessionCreated: 'session/created',
+    sessionDisposed: 'session/disposed',
+    sessionFlush: 'session/flush',
     turnStart: 'turn/start',
     turnEnd: 'turn/end',
     userMessage: 'user/message',
@@ -41,6 +48,15 @@ export const defaultConfig = {
     toolCall: 'tool/call',
     toolResult: 'tool/result',
   },
+};
+
+/** How each turn/end reason.kind maps onto the Mission Control board. */
+export const REASON_STATUS = {
+  completed: 'REVIEW',
+  blocked: 'BLOCKED',
+  failed: 'BLOCKED',
+  aborted: 'ASSIGNED',
+  interrupted: 'ASSIGNED',
 };
 
 export function apply(ctx, userConfig = {}) {
@@ -57,11 +73,12 @@ export function apply(ctx, userConfig = {}) {
   const log = makeLogger(ctx);
   const client = new MissionControlClient({
     baseUrl: config.missionControlUrl,
+    authToken: config.authToken,
     dryRun: config.dryRun,
     log,
   });
 
-  // sessionId → { taskId, turns } for sessions seen while this plugin is loaded
+  // sessionId → { taskId, turn } for sessions seen while this plugin is loaded
   const sessions = new Map();
 
   registerAgent(client, config);
@@ -73,92 +90,121 @@ export function apply(ctx, userConfig = {}) {
     type: 'chat',
   });
 
-  const dispose = ctx.on(config.events.channel, (...args) => {
+  const guarded = (fn) => (...args) => {
     try {
-      handleEvent(normalizeEvent(args), { client, config, sessions, log });
+      return fn(...args);
     } catch (err) {
       // Never let board mirroring break the agent loop.
       log('error', `event handling failed: ${err.message}`);
     }
-  });
+  };
 
-  // Cordis unwinds ctx.on registrations automatically on unload; the explicit
-  // disposer covers hosts that hand one back without auto-unwinding.
-  return () => {
-    if (typeof dispose === 'function') dispose();
+  const disposers = [
+    ctx.on(config.events.sessionCreated, guarded((session) => {
+      const sessionId = sessionIdOf(session);
+      if (sessionId) ensureTask(sessionId, { client, config, sessions });
+    })),
+
+    ctx.on(config.events.sessionDisposed, guarded((session) => {
+      const sessionId = sessionIdOf(session);
+      const record = sessionId && sessions.get(sessionId);
+      if (record) client.logActivity(config.agentId, 'SESSION_DISPOSED', `${record.taskId} session left the store`);
+    })),
+
+    ctx.on(config.events.channel, guarded((...args) => {
+      handleSessionEvent(normalizeEvent(args), { client, config, sessions });
+    })),
+
+    // Awaited parallel durability checkpoint: dsh waits for every listener,
+    // so our queued HTTP rides the same flush the session log does.
+    ctx.on(config.events.sessionFlush, () => client.flush(config.flushTimeoutMs)),
+  ];
+
+  return async () => {
+    for (const dispose of disposers) {
+      if (typeof dispose === 'function') dispose();
+    }
     client.logActivity(config.agentId, 'DISCONNECTED', 'dsh mission-control plugin unloaded');
     client.stop();
+    await client.flush(config.flushTimeoutMs);
   };
 }
 
 // ── Event handling ──────────────────────────────────────────────────────────
 
-function handleEvent(evt, { client, config, sessions, log }) {
+function handleSessionEvent(evt, { client, config, sessions }) {
   if (!evt || !evt.type) return;
   const e = config.events;
-  const sessionId = evt.sessionId;
+  const { sessionId, data } = evt;
 
   switch (evt.type) {
     case e.turnStart: {
       const record = ensureTask(sessionId, { client, config, sessions });
-      record.turns += 1;
-      if (record.turns > 1) {
+      record.turn = typeof data.turn === 'number' ? data.turn : record.turn + 1;
+      if (record.turn > 1) {
         client.patchTask(record.taskId, {
           status: 'IN_PROGRESS',
           updated_at: new Date().toISOString(),
         });
       }
-      client.logActivity(config.agentId, 'TURN_START', `${record.taskId} turn ${record.turns}`);
+      client.logActivity(config.agentId, 'TURN_START', `${record.taskId} turn ${record.turn}`);
       break;
     }
 
     case e.turnEnd: {
       const record = sessions.get(sessionId);
       if (!record) return;
+      const kind = data.reason?.kind || 'completed';
+      const status = REASON_STATUS[kind] || 'REVIEW';
       client.patchTask(record.taskId, {
-        status: 'REVIEW',
+        status,
         updated_at: new Date().toISOString(),
       });
-      client.logActivity(config.agentId, 'TURN_END', `${record.taskId} turn ${record.turns} complete, task in REVIEW`);
-      client.sendMessage({
-        from: config.agentId,
-        to: 'all',
-        content: `Turn ${record.turns} of ${record.taskId} finished — awaiting review.`,
-        thread_id: 'chat-general',
-        type: 'chat',
-      });
+      let detail = `${record.taskId} turn ${record.turn} ended (${kind}) → ${status}`;
+      if (kind === 'failed' && data.reason?.error) {
+        const err = data.reason.error;
+        detail += ` — ${err.code || 'UNKNOWN'}: ${String(err.message || '').slice(0, 160)}`;
+      }
+      client.logActivity(config.agentId, 'TURN_END', detail);
+      if (status === 'REVIEW') {
+        client.sendMessage({
+          from: config.agentId,
+          to: 'all',
+          content: `Turn ${record.turn} of ${record.taskId} finished — awaiting review.`,
+          thread_id: 'chat-general',
+          type: 'chat',
+        });
+      }
       break;
     }
 
     case e.userMessage: {
       const record = ensureTask(sessionId, { client, config, sessions });
-      client.logActivity('human', 'USER_MESSAGE', `${record.taskId}: ${excerpt(evt, config.maxExcerpt)}`);
+      client.logActivity('human', 'USER_MESSAGE', `${record.taskId}: ${excerpt(data.content, config.maxExcerpt)}`);
       break;
     }
 
     case e.assistantMessage: {
       const record = ensureTask(sessionId, { client, config, sessions });
-      client.logActivity(config.agentId, 'ASSISTANT_MESSAGE', `${record.taskId}: ${excerpt(evt, config.maxExcerpt)}`);
+      client.logActivity(config.agentId, 'ASSISTANT_MESSAGE', `${record.taskId}: ${excerpt(data.message?.content, config.maxExcerpt)}`);
       break;
     }
 
     case e.toolCall: {
       const record = sessions.get(sessionId);
-      const toolName = evt.raw?.tool || evt.raw?.name || 'tool';
-      client.logActivity(config.agentId, 'TOOL_CALL', `${record?.taskId || sessionId}: ${toolName}`);
+      client.logActivity(config.agentId, 'TOOL_CALL', `${record?.taskId || sessionId}: ${data.name || 'tool'}`);
       break;
     }
 
     case e.toolResult: {
       const record = sessions.get(sessionId);
-      const toolName = evt.raw?.tool || evt.raw?.name || 'tool';
-      const status = evt.raw?.error ? 'error' : 'ok';
-      client.logActivity(config.agentId, 'TOOL_RESULT', `${record?.taskId || sessionId}: ${toolName} → ${status}`);
+      const status = data.error ? `error (${data.error.code || data.error.name || 'unknown'})` : 'ok';
+      client.logActivity(config.agentId, 'TOOL_RESULT', `${record?.taskId || sessionId}: ${status}`);
       break;
     }
 
     default:
-      // step/start, step/end, assistant/chunk, etc. — intentionally ignored.
+      // step/start, step/end, assistant/chunk, todo/write, … — ignored.
       break;
   }
 }
@@ -170,7 +216,7 @@ function ensureTask(sessionId, { client, config, sessions }) {
   const now = new Date();
   const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
   const taskId = `task-${datePart}-dsh-${sanitizeId(sessionId)}`;
-  record = { taskId, turns: 0 };
+  record = { taskId, turn: 0 };
   sessions.set(sessionId, record);
 
   client.createTask({
@@ -225,30 +271,38 @@ function registerAgent(client, config) {
 // ── Normalization helpers ───────────────────────────────────────────────────
 
 /**
- * The preview docs describe `session/event` but not its exact listener
- * signature. Accept any argument order: the event is whichever object carries
- * a string `type`; the session is whatever else exposes an id.
+ * rc.7 emits `session/event` with the listener signature `(session, event)`
+ * where the event is a `{ type, seq, time, data }` wrapper. Accept any
+ * argument order anyway: the event is whichever object carries a string
+ * `type`; the session is whatever else exposes an id.
  */
 function normalizeEvent(args) {
   const objs = args.filter((a) => a && typeof a === 'object');
   const event = objs.find((o) => typeof o.type === 'string') || null;
   if (!event) return null;
-  const session = objs.find((o) => o !== event && (o.id || o.sessionId)) || null;
+  const session = objs.find((o) => o !== event && sessionIdOf(o)) || null;
   const sessionId = String(
-    event.sessionId || event.session?.id || session?.id || session?.sessionId || 'default'
+    event.sessionId || event.session?.id || sessionIdOf(session) || 'default'
   );
-  return { type: event.type, sessionId, raw: event };
+  // rc.7 wraps payloads in `data`; fall back to the event root for older or
+  // foreign shapes.
+  const data = (event.data && typeof event.data === 'object') ? event.data : event;
+  return { type: event.type, sessionId, data };
 }
 
-/** Flatten dsh message content (string or content-part array) to a short excerpt. */
-function excerpt(evt, maxLen) {
-  const content = evt.raw?.content ?? evt.raw?.text ?? evt.raw?.message?.content ?? '';
+function sessionIdOf(session) {
+  if (!session || typeof session !== 'object') return null;
+  return session.id || session.sessionId || session.header?.id || null;
+}
+
+/** Flatten message content (string or ContentBlock[]) to a short excerpt. */
+function excerpt(content, maxLen) {
   let text;
   if (typeof content === 'string') {
     text = content;
   } else if (Array.isArray(content)) {
     text = content
-      .map((part) => (typeof part === 'string' ? part : part?.text || ''))
+      .map((part) => (typeof part === 'string' ? part : part?.type === 'text' ? part.text : part?.text || ''))
       .filter(Boolean)
       .join(' ');
   } else {
@@ -265,7 +319,7 @@ function sanitizeId(value) {
 }
 
 function makeLogger(ctx) {
-  const target = ctx?.logger?.('mission-control');
+  const target = typeof ctx?.logger === 'function' ? ctx.logger('mission-control') : null;
   return (level, msg) => {
     if (target && typeof target[level] === 'function') target[level](msg);
     else console[level === 'error' ? 'error' : 'log'](`[mission-control] ${msg}`);
