@@ -28,6 +28,9 @@ else
   WORK="$(mktemp -d)"; WORK_CREATED=1
 fi
 mkdir -p "$WORK"
+# Normalize to an absolute path: later stages cd into other directories and
+# a relative E2E_WORKDIR would resolve against the wrong base.
+WORK="$(cd "$WORK" && pwd)"
 DSH_VERSION="${DSH_VERSION:-0.1.0-rc.7}"
 MC_PORT="${MC_PORT:-3556}"
 MOCK_LLM_PORT="${MOCK_LLM_PORT:-4517}"
