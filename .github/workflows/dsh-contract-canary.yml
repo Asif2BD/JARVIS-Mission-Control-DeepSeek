@@ -1,0 +1,59 @@
+name: dsh contract canary
+
+# Guards the bridge against DeepSeek-Harness preview churn: installs the
+# pinned dsh session package and checks that every event name and payload
+# path the plugin relies on still exists in the shipped type definitions.
+# A failure here usually means a new rc changed the contract — typically a
+# one-line fix in the plugin's `events` config defaults.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+env:
+  DSH_PINNED_VERSION: 0.1.0-rc.7
+
+jobs:
+  contract-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned dsh session package
+        run: |
+          mkdir probe && cd probe && npm init -y > /dev/null
+          npm install "@deepseek-ai/dsh-session@${DSH_PINNED_VERSION}" --no-audit --no-fund
+      - name: Check session event contract
+        working-directory: probe
+        run: |
+          TYPES=node_modules/@deepseek-ai/dsh-session/lib/types
+          fail=0
+          check() {
+            if grep -rq "$1" "$TYPES"; then echo "ok: $1"; else echo "MISSING: $1"; fail=1; fi
+          }
+          # Event channel + listener contract
+          check "'session/event'"
+          check "'session/created'"
+          check "'session/disposed'"
+          check "'session/flush'"
+          # SessionEventMap members the plugin consumes
+          check "'turn/start'"
+          check "'turn/end'"
+          check "'user/message'"
+          check "'assistant/message'"
+          check "'tool/call'"
+          check "'tool/result'"
+          # Payload fields
+          check "TurnEndReasonMap"
+          check "SessionEventMap"
+          grep -rq "data: SessionEventMap" "$TYPES" || { echo "MISSING: {type,seq,time,data} wrapper"; fail=1; }
+          exit $fail
+      - name: Check for newer dsh releases
+        run: |
+          LATEST=$(npm view @deepseek-ai/dsh-session version)
+          echo "Pinned: ${DSH_PINNED_VERSION} — Latest on npm: ${LATEST}"
+          if [ "$LATEST" != "${DSH_PINNED_VERSION}" ]; then
+            echo "::warning::A newer dsh release (${LATEST}) is available — re-validate the bridge and bump DSH_PINNED_VERSION."
+          fi

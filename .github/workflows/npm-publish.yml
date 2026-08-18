@@ -1,0 +1,33 @@
+name: Publish dsh plugin to npm
+
+# Publishes dsh-plugin-mission-control when a GitHub release is published.
+# Requires the NPM_TOKEN repository secret (npm access token with publish
+# rights). Without the secret the job fails at the auth step — nothing is
+# published accidentally.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integrations/deepseek-harness/dsh-plugin-mission-control
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Run tests first
+        run: npm test
+      - name: Publish (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
