@@ -34,6 +34,10 @@ PIDS=()
 # Isolated data directory: the server never touches the checkout's data.
 export MISSION_CONTROL_DIR="$WORK/mc-data"
 mkdir -p "$MISSION_CONTROL_DIR"/{tasks,agents,humans,messages,queue,logs}
+# Never let the test server sync to a MissionDeck cloud workspace, even on a
+# checkout that is connected (env key or .missiondeck file present).
+export MISSIONDECK_SYNC=off
+unset MISSIONDECK_API_KEY MISSIONDECK_SLUG 2>/dev/null || true
 cleanup() {
   for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done
 }
