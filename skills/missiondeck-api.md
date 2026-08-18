@@ -13,7 +13,7 @@ This skill covers everything MissionDeck provides: hosted dashboards, one-click 
 | Hosted dashboard at `missiondeck.ai/workspace/slug` | ✅ | ✅ | ✅ |
 | Cloud sync from local Mission Control | ✅ | ✅ | ✅ |
 | Agent Builder (visual agent design) | ✅ | ✅ | ✅ |
-| One-click OpenClaw deploy to Orgo Cloud | ✅ (1 deploy) | ✅ (5 deploys) | ✅ (unlimited) |
+| One-click agent deploy to Orgo Cloud | ✅ (1 deploy) | ✅ (5 deploys) | ✅ (unlimited) |
 | Deploy to your own VPS (BYOS) | ✅ | ✅ | ✅ |
 | Multi-agent team deployment | ✅ | ✅ | ✅ |
 | Telegram bot auto-connect | ✅ | ✅ | ✅ |
@@ -68,7 +68,7 @@ The wizard authenticates, configures auto-sync, and gives you your live URL.
 
 ## Feature 2: One-Click Agent Deployment
 
-Deploy a fully configured OpenClaw agent in 60 seconds — no SSH, no server setup.
+Deploy a fully configured agent in 60 seconds — no SSH, no server setup. (DeepSeek-Harness deploy support is tracked on the MissionDeck roadmap.)
 
 Go to **[missiondeck.ai/deploy](https://missiondeck.ai/deploy)**
 
@@ -114,10 +114,10 @@ Use the **Agent Builder** (missiondeck.ai/agent-builder) to visually design your
 
 Click **Deploy Now**. MissionDeck:
 1. Provisions your VM (Orgo) or connects to your server (BYOS)
-2. Installs Node.js and OpenClaw via npm
-3. Writes `openclaw.json` with full multi-agent routing config
+2. Installs Node.js and the agent runtime via npm
+3. Writes the runtime config with full multi-agent routing
 4. Creates individual workspaces with `SOUL.md` and `IDENTITY.md` per agent
-5. Starts the OpenClaw gateway
+5. Starts the agent runtime
 6. Verifies your Telegram bot is live
 7. Reports back in real-time with deployment logs
 

@@ -118,19 +118,6 @@
 
     <!-- Feature Widget Cards (v1.16.0) -->
     <div class="metrics-cards" id="feature-metrics">
-        <div class="feature-card" id="fcard-claude" onclick="openClaudeSessions()" title="Open Claude Sessions">
-            <div class="fcard-header">
-                <span class="fcard-icon">🖥</span>
-                <span class="fcard-title">Claude Sessions</span>
-                <span class="fcard-status-dot" id="fcard-claude-dot"></span>
-            </div>
-            <div class="fcard-metric" id="fcard-claude-main">—</div>
-            <div class="fcard-secondary" id="fcard-claude-secondary">— total</div>
-            <div class="fcard-footer">
-                <span class="fcard-time" id="fcard-claude-time">Last scan: —</span>
-                <span class="fcard-arrow">→</span>
-            </div>
-        </div>
         <div class="feature-card" id="fcard-cli" onclick="openCliConnectionsPanel ? openCliConnectionsPanel() : openCliConnections()" title="Open CLI Connections">
             <div class="fcard-header">
                 <span class="fcard-icon">⚡</span>
@@ -228,32 +215,6 @@
                     <span class="sgroup-label">Intelligence</span>
                 </div>
                 <div class="sidebar-group-body" id="sgroup-body-intelligence">
-                    <!-- OpenClaw Sessions Section (v2.1.0) -->
-                    <div class="sidebar-section">
-                        <div class="sidebar-header" style="cursor:pointer;" onclick="openOpenclawSessions()" title="View OpenClaw Gateway Sessions">
-                            <h2 class="sidebar-title">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <path d="M12 6v6l4 2"></path>
-                                </svg>
-                                OpenClaw Sessions
-                            </h2>
-                            <p class="sidebar-subtitle" id="openclaw-sessions-subtitle">Loading…</p>
-                        </div>
-                    </div>
-                    <!-- Claude Sessions Section (v1.2.0) -->
-                    <div class="sidebar-section">
-                        <div class="sidebar-header" style="cursor:pointer;" onclick="openClaudeSessions()" title="View Claude Code Sessions">
-                            <h2 class="sidebar-title">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="3" width="20" height="14" rx="2"></rect>
-                                    <path d="M8 21h8m-4-4v4"></path>
-                                </svg>
-                                Claude Sessions
-                            </h2>
-                            <p class="sidebar-subtitle" id="claude-sessions-subtitle">Loading…</p>
-                        </div>
-                    </div>
                     <!-- CLI Connections Section (v1.3.0) -->
                     <div class="sidebar-section">
                         <div class="sidebar-header" style="cursor:pointer;" onclick="openCliConnections()" title="View Live CLI Connections">
@@ -323,7 +284,7 @@
                     </div>
                     <!-- CLI Integration Section (v1.3.0) -->
                     <div class="sidebar-section">
-                        <div class="sidebar-header" style="cursor:pointer;" onclick="openCliPanel()" title="OpenClaw CLI Commands">
+                        <div class="sidebar-header" style="cursor:pointer;" onclick="openCliPanel()" title="CLI Commands">
                             <h2 class="sidebar-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="4 17 10 11 4 5"></polyline>
@@ -331,7 +292,7 @@
                                 </svg>
                                 CLI Console
                             </h2>
-                            <p class="sidebar-subtitle">Run OpenClaw commands</p>
+                            <p class="sidebar-subtitle">Run system commands</p>
                         </div>
                     </div>
                 </div>
@@ -629,7 +590,7 @@
                     Created by <a href="https://masifrahman.com/" target="_blank" rel="noopener">M Asif Rahman</a>
                 </span>
                 <span class="footer-divider">|</span>
-                <a href="https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw" target="_blank" rel="noopener" class="footer-link">
+                <a href="https://github.com/Asif2BD/JARVIS-Mission-Control-DeepSeek" target="_blank" rel="noopener" class="footer-link">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                     </svg>
@@ -1356,7 +1317,7 @@
             <div class="panel-header-icon">⏰</div>
             <div class="panel-header-text">
                 <h3>Scheduled Jobs</h3>
-                <p>OpenClaw cron jobs across all agents</p>
+                <p>Scheduled jobs across all agents</p>
             </div>
             <div class="panel-header-stats">
                 <span class="stat-pill" id="schedules-count">— jobs</span>
@@ -1390,44 +1351,6 @@
         </div>
     </div>
 
-    <!-- OpenClaw Sessions Panel (v2.1.0) -->
-    <div class="agent-profile-panel" id="openclaw-sessions-panel" style="display:none; width:580px; max-width:95vw;">
-        <div class="panel-header-gradient">
-            <div class="panel-header-icon">🌐</div>
-            <div class="panel-header-text">
-                <h3>OpenClaw Sessions</h3>
-                <p>Gateway sessions across all agents</p>
-            </div>
-            <div class="panel-header-stats">
-                <span class="stat-pill" id="openclaw-panel-pill">Loading…</span>
-            </div>
-            <button class="close-btn profile-close" onclick="closeOpenclawSessions()" aria-label="Close">&times;</button>
-        </div>
-        <div class="profile-panel-body" style="padding:0 20px 20px;">
-            <div id="openclaw-sessions-meta" style="font-size:12px; color:var(--text-muted); margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap;"></div>
-            <div id="openclaw-sessions-list" style="max-height:500px; overflow-y:auto;"></div>
-        </div>
-    </div>
-
-    <!-- Claude Sessions Panel (v1.2.0) -->
-    <div class="agent-profile-panel" id="claude-sessions-panel" style="display:none; width:520px; max-width:95vw;">
-        <div class="panel-header-gradient">
-            <div class="panel-header-icon">🖥</div>
-            <div class="panel-header-text">
-                <h3>Claude Sessions</h3>
-                <p>Auto-discovered from ~/.claude/projects/</p>
-            </div>
-            <div class="panel-header-stats">
-                <span class="stat-pill" id="claude-panel-pill">Loading…</span>
-            </div>
-            <button class="close-btn profile-close" onclick="closeClaudeSessions()" aria-label="Close">&times;</button>
-        </div>
-        <div class="profile-panel-body" style="padding:0 20px 20px;">
-            <div id="claude-sessions-meta" style="font-size:12px; color:var(--text-muted); margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap;"></div>
-            <div id="claude-sessions-list"></div>
-        </div>
-    </div>
-
     <!-- GitHub Issues Panel (v1.4.0) -->
     <div class="agent-profile-panel" id="github-panel" style="display:none; width:620px; max-width:95vw;">
         <div class="panel-header-gradient">
@@ -1449,7 +1372,7 @@
                     <span id="github-config-status" style="font-size:11px; color:var(--text-muted);"></span>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <input id="github-repo-input" type="text" placeholder="owner/repo (e.g. Asif2BD/JARVIS-Mission-Control-OpenClaw)" style="flex:1; min-width:200px; padding:6px 10px; border-radius:4px; border:1px solid var(--border-color,#30363d); background:var(--bg-primary,#010b13); color:var(--text-primary,#e2e8f0); font-size:12px; font-family:inherit;" />
+                    <input id="github-repo-input" type="text" placeholder="owner/repo (e.g. Asif2BD/JARVIS-Mission-Control-DeepSeek)" style="flex:1; min-width:200px; padding:6px 10px; border-radius:4px; border:1px solid var(--border-color,#30363d); background:var(--bg-primary,#010b13); color:var(--text-primary,#e2e8f0); font-size:12px; font-family:inherit;" />
                     <input id="github-token-input" type="password" placeholder="GitHub token (optional, for private repos)" style="flex:1; min-width:180px; padding:6px 10px; border-radius:4px; border:1px solid var(--border-color,#30363d); background:var(--bg-primary,#010b13); color:var(--text-primary,#e2e8f0); font-size:12px; font-family:inherit;" />
                     <button class="btn btn-secondary" onclick="saveGithubConfig()" style="font-size:12px; padding:6px 12px; white-space:nowrap;">Save Config</button>
                 </div>
@@ -1479,7 +1402,7 @@
             <div class="panel-header-icon">💻</div>
             <div class="panel-header-text">
                 <h3>CLI Console</h3>
-                <p>Run whitelisted OpenClaw &amp; system commands</p>
+                <p>Run whitelisted system commands</p>
             </div>
             <div class="panel-header-stats">
                 <span class="stat-pill">Interactive</span>
@@ -1487,7 +1410,7 @@
             <button class="close-btn profile-close" onclick="closeCliPanel()" aria-label="Close">&times;</button>
         </div>
         <div class="profile-panel-body" style="padding:0 20px 20px;">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">Run whitelisted OpenClaw &amp; system commands safely from the dashboard.</p>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">Run whitelisted system commands safely from the dashboard.</p>
             <div id="cli-buttons" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
                 <!-- Buttons injected by cli.js -->
             </div>
@@ -1521,7 +1444,7 @@
             <div class="panel-header-icon">⚡</div>
             <div class="panel-header-text">
                 <h3>CLI Connections</h3>
-                <p>Live OpenClaw CLI tool connections</p>
+                <p>Live CLI tool connections</p>
             </div>
             <div class="panel-header-stats">
                 <span class="stat-pill" id="cli-conn-panel-pill">Loading…</span>
@@ -1626,8 +1549,6 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script src="./js/app.js"></script>
     <script src="./js/dashboard-widgets.js"></script>
-    <script src="./js/claude-sessions.js"></script>
-    <script src="./js/openclaw-sessions.js"></script>
     <script src="./js/cli.js"></script>
     <script src="./js/github-issues.js"></script>
     <script src="./js/cli-connections.js"></script>

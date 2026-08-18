@@ -6,7 +6,7 @@
 - **Local URL:** http://localhost:3000
 - **External URL:** https://zion.asif.dev (nginx proxy, basic auth protected)
 - **Process:** PM2 (`mission-control-server`)
-- **Repo path:** `/root/.openclaw/workspace/agents/tank/mission-control/`
+- **Repo path:** `/opt/jarvis-mission-control-deepseek/`
 
 ⚠️ **zion.asif.dev is PRIVATE** — never share it publicly, never put it in docs/READMEs.
 **Public demo:** https://missiondeck.ai/mission-control/demo
@@ -14,7 +14,7 @@
 ## Standard Deploy (after merge to main)
 
 ```bash
-cd /root/.openclaw/workspace/agents/tank/mission-control
+cd /opt/jarvis-mission-control-deepseek
 
 # Safe pull (backs up .mission-control/ first, then pulls)
 ./scripts/safe-deploy.sh --pull

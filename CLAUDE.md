@@ -49,12 +49,12 @@
 
 ```bash
 # 1. Fork this repo, then clone your fork
-git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-OpenClaw
+git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-DeepSeek
 
 # 2. Get a free API key at: https://missiondeck.ai/auth  (no credit card)
 
 # 3. Connect to MissionDeck cloud
-cd JARVIS-Mission-Control-OpenClaw
+cd JARVIS-Mission-Control-DeepSeek
 ./scripts/connect-missiondeck.sh --api-key YOUR_KEY
 
 # 4. Your dashboard is live at:
@@ -64,8 +64,8 @@ cd JARVIS-Mission-Control-OpenClaw
 ### 🖥️ Local Setup
 ```bash
 # 1. Fork this repo, then clone your fork
-git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-OpenClaw
-cd JARVIS-Mission-Control-OpenClaw
+git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-DeepSeek
+cd JARVIS-Mission-Control-DeepSeek
 
 # 2. Install and start the server
 cd server && npm install
@@ -93,7 +93,7 @@ This open-source repo is the engine. **MissionDeck.ai** is the platform built ar
 
 | What you want | Where to go |
 |---------------|-------------|
-| Deploy OpenClaw agents (cloud or your own VPS) | **[missiondeck.ai/deploy](https://missiondeck.ai/deploy)** |
+| Deploy agents (cloud or your own VPS) | **[missiondeck.ai/deploy](https://missiondeck.ai/deploy)** |
 | Build and design agents visually | **[missiondeck.ai/agent-builder](https://missiondeck.ai/agent-builder)** |
 | Host your dashboard online | **`missiondeck.ai/mission-control/your-slug`** — run `./scripts/connect-missiondeck.sh --api-key YOUR_KEY` |
 | Get your free API key | **[missiondeck.ai/auth](https://missiondeck.ai/auth)** |
@@ -336,12 +336,11 @@ These Matrix-themed identities are available in `examples/demo-data/` for refere
 │   ├── activity.log         # All system activity (append-only)
 │   └── YYYY-MM-DD.log       # Daily activity logs
 ├── integrations/            # Communication channel configs
-└── hooks/                   # OpenClaw lifecycle hooks
 
 dashboard/                   # Visual Kanban dashboard
 server/                      # Backend API server
 ├── index.js                 # Express + WebSocket server
-├── agent-bridge.js          # OpenClaw session bridge
+integrations/deepseek-harness/       # dsh bridge plugin + tests
 └── start-all.js             # Unified startup (server + bridge)
 scripts/                     # CLI helper scripts
 skills/                      # Modular skill definitions (by role)
@@ -1156,7 +1155,7 @@ Actions:
 
 View the visual Mission Control dashboard at:
 ```
-https://YOUR-ORG.github.io/JARVIS-Mission-Control-OpenClaw/dashboard/
+https://YOUR-ORG.github.io/JARVIS-Mission-Control-DeepSeek/dashboard/
 ```
 
 ## Quick Commands
@@ -1310,7 +1309,7 @@ npm run all        # Server + agent bridge together
 | REST API | CRUD operations at `http://localhost:3000/api` |
 | WebSocket | Real-time updates at `ws://localhost:3000/ws` |
 | File Watcher | Detects when you modify JSON files via Git |
-| Agent Bridge | Monitors OpenClaw sessions, auto-creates tasks (see `docs/AGENT-BRIDGE.md`) |
+| dsh Bridge | Plugin inside DeepSeek-Harness mirrors sessions to the board (see `integrations/deepseek-harness/README.md`) |
 | Webhooks | Register webhooks to get notified of changes |
 
 ### How It Works

@@ -40,8 +40,8 @@ Humans maintain oversight through:
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
-│  │    Dashboard    │  │     Scripts     │  │   OpenClaw      │         │
-│  │   (Static UI)   │  │   (CLI Tools)   │  │    Hooks        │         │
+│  │    Dashboard    │  │     Scripts     │  │  dsh Bridge     │         │
+│  │   (Static UI)   │  │   (CLI Tools)   │  │  (dsh plugin)   │         │
 │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘         │
 │           │                    │                    │                   │
 │           │    Read/Write      │                    │                   │
@@ -88,11 +88,6 @@ Humans maintain oversight through:
 │   └── workflow-feature.json
 ├── logs/                    # Activity logs
 │   └── 2026-02-05-activity.log
-└── hooks/                   # OpenClaw integration hooks
-    ├── on-agent-start.sh
-    ├── on-agent-complete.sh
-    ├── on-agent-error.sh
-    └── on-tool-use.sh
 ```
 
 ### Data Flow
@@ -112,9 +107,9 @@ Humans maintain oversight through:
    Browser → dashboard/index.html → reads tasks/*.json → renders UI
    ```
 
-4. **OpenClaw Integration**
+4. **DeepSeek-Harness Integration**
    ```
-   OpenClaw event → hook script → updates task → Git commit
+   dsh session event → mission-control plugin (inside dsh) → REST API → task/log update
    ```
 
 ## Task Lifecycle
@@ -230,48 +225,25 @@ dashboard/
            └── renderAgents()
 ```
 
-## OpenClaw Integration
+## DeepSeek-Harness Integration
 
-### Hook System
-
-OpenClaw hooks are shell scripts that run at lifecycle events:
-
-```
-OpenClaw Gateway
-       │
-       ├── on-agent-start.sh   → Creates task
-       ├── on-tool-use.sh      → Adds progress comments
-       ├── on-agent-complete.sh → Moves to REVIEW
-       └── on-agent-error.sh   → Moves to BLOCKED
-```
-
-### Environment Variables
-
-OpenClaw provides these to hooks:
-
-| Variable | Description |
-|----------|-------------|
-| `OPENCLAW_SESSION_ID` | Unique session identifier |
-| `OPENCLAW_AGENT_NAME` | Agent's display name |
-| `OPENCLAW_PROMPT` | Initial user prompt |
-| `OPENCLAW_TOOL_NAME` | Current tool being used |
-| `OPENCLAW_THINKING` | Agent's reasoning |
-| `OPENCLAW_RESULT` | Final result (on complete) |
-| `OPENCLAW_ERROR` | Error message (on error) |
-
-### Task Mapping
-
-Each OpenClaw session maps to a Mission Control task:
+The bridge is a Cordis plugin mounted inside DeepSeek-Harness
+(`integrations/deepseek-harness/dsh-plugin-mission-control`). It subscribes to
+dsh's append-only `session/event` stream and forwards task-relevant moments to
+this server's REST API:
 
 ```
-OpenClaw Session ←→ Mission Control Task
-     session_id  ←→ metadata.openclaw_session_id
-     agent_name  ←→ assignee
-     prompt      ←→ title/description
-     tool_use    ←→ comments
-     completion  ←→ status: REVIEW
-     error       ←→ status: BLOCKED
+dsh agent loop
+       │  session/created          → POST /api/tasks        (IN_PROGRESS)
+       │  user/assistant messages  → POST /api/logs/activity
+       │  tool/call, tool/result   → POST /api/logs/activity
+       │  turn/end (completed)     → PATCH /api/tasks/:id   (REVIEW)
+       │  turn/end (blocked/failed)→ PATCH /api/tasks/:id   (BLOCKED)
+       └  session/flush            → awaited queue flush
 ```
+
+Auth: set `MC_AGENT_TOKEN` (server) and the plugin's `authToken` config to the
+same value for `Authorization: Bearer` on every bridge request.
 
 ## Security Architecture
 

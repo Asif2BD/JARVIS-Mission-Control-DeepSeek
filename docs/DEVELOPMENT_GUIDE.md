@@ -35,7 +35,7 @@ JARVIS Mission Control is a **Git-based** task management and agent orchestratio
 ├─────────────────────────────────────────────────────────────┤
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │   Dashboard  │  │   Scripts    │  │   Hooks      │      │
-│  │  (Static UI) │  │  (CLI Tools) │  │  (OpenClaw)  │      │
+│  │  (Static UI) │  │  (CLI Tools) │  │  (dsh)       │      │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
 │         │                 │                 │               │
 │         └────────────┬────┴────────┬────────┘               │
@@ -63,14 +63,14 @@ JARVIS Mission Control is a **Git-based** task management and agent orchestratio
 - Git 2.30+
 - Bash shell (for scripts)
 - Node.js 18+ (for dashboard development)
-- (Optional) OpenClaw for agent integration
+- (Optional) DeepSeek-Harness (`dsh`) for agent integration
 
 ### Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/JARVIS-Mission-Control-OpenClaw.git
-cd JARVIS-Mission-Control-OpenClaw
+git clone https://github.com/your-org/JARVIS-Mission-Control-DeepSeek.git
+cd JARVIS-Mission-Control-DeepSeek
 
 # Make scripts executable
 chmod +x scripts/*.sh

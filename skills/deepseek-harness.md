@@ -1,7 +1,7 @@
 # Skill: DeepSeek-Harness Bridge
 
 > Connect a DeepSeek-Harness (`dsh`) agent to the Mission Control board.
-> Load this skill when: setting up dsh, debugging the dsh plugin, or deciding between dsh and OpenClaw as an agent runtime.
+> Load this skill when: setting up dsh or debugging the dsh bridge plugin.
 
 **Status: Experimental** — dsh is a v0.1 developer preview; expect upstream breaking changes.
 

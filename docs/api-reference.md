@@ -333,7 +333,7 @@ See the default configuration file for complete documentation of all options.
 - `agents` - Agent types and roles
 - `tasks` - Task configuration
 - `communication` - Comment types and notifications
-- `openclaw` - OpenClaw integration settings
+- `deepseek_harness` - DeepSeek-Harness bridge defaults
 - `security` - Security configuration
 - `logging` - Logging settings
 - `dashboard` - Dashboard configuration

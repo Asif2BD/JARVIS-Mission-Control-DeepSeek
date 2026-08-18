@@ -5,7 +5,7 @@ project:
   name: "JARVIS Mission Control"
   version: "1.0.0"
   description: "Git-based AI agent orchestration system"
-  repository: "https://github.com/your-org/JARVIS-Mission-Control-OpenClaw"
+  repository: "https://github.com/your-org/JARVIS-Mission-Control-DeepSeek"
 
 # Workflow Configuration
 workflow:
@@ -216,34 +216,19 @@ communication:
     - event: comment_added
       notify: [assignee, created_by]
 
-# OpenClaw Integration
-openclaw:
+# DeepSeek-Harness Integration
+# The bridge runs INSIDE dsh as a plugin (integrations/deepseek-harness/
+# dsh-plugin-mission-control) and talks to this server's REST API, so there
+# is no gateway process to configure here. These values document the defaults
+# the plugin ships with.
+deepseek_harness:
   enabled: true
-  gateway_url: "ws://127.0.0.1:18789"
-
-  # Auto-task creation for agent sessions
-  # DISABLED: Creates too much noise. Create tasks manually before spawning agents.
-  # To link a session to a task, include "Task ID: task-xyz" in the spawn prompt.
-  auto_create_tasks: false
-
-  # Lifecycle hooks
-  hooks:
-    on_agent_start:
-      # DISABLED: was creating junk tasks for every spawn
-      # - action: create_task
-      #   template: "agent_session"
-    on_agent_complete:
-      - action: update_task
-        status: REVIEW
-    on_agent_error:
-      - action: update_task
-        status: BLOCKED
-    on_tool_use:
-      - action: add_comment
-        type: progress
-
-  # Session mapping
-  session_prefix: "mc:"
+  # Where the plugin reaches this server
+  mission_control_url: "http://localhost:3000"
+  # Agent identity the plugin registers on the board
+  agent_id: "agent-dsh"
+  # Auto-created task ids look like: task-YYYYMMDD-dsh-<session-id>
+  task_prefix: "dsh"
 
 # Security Configuration
 security:

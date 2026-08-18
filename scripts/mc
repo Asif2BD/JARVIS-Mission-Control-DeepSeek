@@ -3,7 +3,7 @@
  * mc — Mission Control CLI for AI Agents
  *
  * Inspired by Clawe (https://github.com/getclawe/clawe)
- * Built for JARVIS Mission Control (https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw)
+ * Built for JARVIS Mission Control (https://github.com/Asif2BD/JARVIS-Mission-Control-DeepSeek)
  *
  * Usage:
  *   mc tasks [--status <status>] [--assignee <id>]

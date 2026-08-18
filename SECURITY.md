@@ -89,8 +89,8 @@ All files should show `OK`. If any fail, the file was modified.
 ### Check Security Posture
 ```bash
 # Clone the repo
-git clone https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw
-cd JARVIS-Mission-Control-OpenClaw
+git clone https://github.com/Asif2BD/JARVIS-Mission-Control-DeepSeek
+cd JARVIS-Mission-Control-DeepSeek
 
 # Run the test suite (51 tests including security)
 cd server && npm install && npm test
@@ -143,7 +143,7 @@ cat server/index.js | grep -A5 "function writeJsonFile"
 - Serve a web dashboard on configured port
 - Read/write JSON files in `.mission-control/` directory
 - Send webhooks to user-configured URLs
-- Execute whitelisted CLI commands (`openclaw status`, etc.)
+- Execute whitelisted system CLI commands (`uptime`, `df`, etc.)
 
 **What this server CANNOT do:**
 - Access files outside `.mission-control/` (path traversal blocked)
@@ -171,7 +171,7 @@ cat server/index.js | grep -A5 "function writeJsonFile"
 ## License & Source
 
 - **License:** Apache 2.0
-- **GitHub:** https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw
+- **GitHub:** https://github.com/Asif2BD/JARVIS-Mission-Control-DeepSeek
 - **ClawHub:** https://clawhub.ai/skills/jarvis-mission-control
 - **Built by:** [MissionDeck.ai](https://missiondeck.ai)
 

@@ -144,7 +144,7 @@ Tasks are displayed with status and priority icons:
 🚫 BLOCKED
 ```
 
-## Integration with OpenClaw Agents
+## Integration with Agents
 
 Add to your agent's environment:
 

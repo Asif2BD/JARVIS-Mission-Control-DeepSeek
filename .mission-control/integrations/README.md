@@ -18,7 +18,7 @@ integrations/
 
 | Channel | Status | Description |
 |---------|--------|-------------|
-| Telegram | Supported | Primary channel for OpenClaw agents |
+| Telegram | Planned | External notification channel (bridge not yet ported to this edition) |
 | WhatsApp | Planned | Via WhatsApp Business API |
 | Slack | Planned | Team communication |
 | Discord | Planned | Community/team servers |
