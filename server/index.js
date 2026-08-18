@@ -39,7 +39,11 @@ function sanitizeInput(val) {
 
 // Configuration
 const PORT = process.env.PORT || 3000;
-const MISSION_CONTROL_DIR = path.join(__dirname, '..', '.mission-control');
+// Data directory: overridable via env (used by the live E2E to run against an
+// isolated directory, and by deployments that keep data outside the checkout).
+const MISSION_CONTROL_DIR = process.env.MISSION_CONTROL_DIR
+    ? path.resolve(process.env.MISSION_CONTROL_DIR)
+    : path.join(__dirname, '..', '.mission-control');
 const DASHBOARD_DIR = path.join(__dirname, '..', 'dashboard');
 
 // Initialize Express

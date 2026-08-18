@@ -17,7 +17,8 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: write # tag + release creation
+  actions: write  # gh workflow run (dispatching npm-publish.yml)
 
 jobs:
   release:

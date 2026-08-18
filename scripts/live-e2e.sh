@@ -14,9 +14,9 @@
 # Env knobs: DSH_VERSION (default 0.1.0-rc.7), MC_PORT (default 3556),
 #            MOCK_LLM_PORT (default 4517), E2E_WORKDIR (default mktemp).
 #
-# Safe on working installations: the server writes E2E artifacts into this
-# checkout's .mission-control/, and cleanup removes ONLY files created during
-# this run (pre-existing data is snapshotted and never deleted).
+# Safe on working installations: the server runs against an ISOLATED data
+# directory under the (ephemeral) workdir via MISSION_CONTROL_DIR, so this
+# checkout's .mission-control/ is never read, written, or cleaned.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,19 +31,11 @@ if [ -n "${DEEPSEEK_API_KEY:-}" ]; then MODE=real; fi
 echo "── live-e2e: mode=${MODE} dsh=${DSH_VERSION} workdir=${WORK}"
 
 PIDS=()
-DATA_DIR="$ROOT/.mission-control"
-SNAPSHOT="$WORK/data-files-before.txt"
-# Snapshot the data dir BEFORE anything runs: cleanup deletes only files that
-# this run created, so a working installation's history is never touched.
-# (Files that pre-existed and were appended to, like an existing activity
-# log, are left in place.)
-find "$DATA_DIR" -type f 2>/dev/null | sort > "$SNAPSHOT" || true
+# Isolated data directory: the server never touches the checkout's data.
+export MISSION_CONTROL_DIR="$WORK/mc-data"
+mkdir -p "$MISSION_CONTROL_DIR"/{tasks,agents,humans,messages,queue,logs}
 cleanup() {
   for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done
-  if [ -f "$SNAPSHOT" ]; then
-    find "$DATA_DIR" -type f 2>/dev/null | sort | comm -13 "$SNAPSHOT" - | \
-      while IFS= read -r f; do rm -f "$f"; done
-  fi
 }
 trap cleanup EXIT
 
@@ -52,13 +44,22 @@ echo "→ Installing server dependencies"
 (cd "$ROOT/server" && (npm ci --no-audit --no-fund 2>/dev/null || npm install --no-audit --no-fund) > /dev/null)
 echo "→ Starting Mission Control on :${MC_PORT}"
 (cd "$ROOT/server" && PORT="$MC_PORT" exec node index.js > "$WORK/mc.log" 2>&1) &
-PIDS+=($!)
+MC_PID=$!
+PIDS+=("$MC_PID")
 for i in $(seq 1 20); do
   curl -sf "http://127.0.0.1:${MC_PORT}/api/metrics" > /dev/null 2>&1 && break
   [ "$i" = 20 ] && { echo "❌ Mission Control did not start"; tail -20 "$WORK/mc.log"; exit 1; }
   sleep 1
 done
-echo "  ✓ board up"
+# The health response must come from OUR server: if the port was already
+# occupied, our spawn died with EADDRINUSE and the response belongs to a
+# foreign instance we must not write E2E data into.
+if ! kill -0 "$MC_PID" 2>/dev/null; then
+  echo "❌ Port ${MC_PORT} answered but our server process is dead (port already in use?)"
+  tail -20 "$WORK/mc.log"
+  exit 1
+fi
+echo "  ✓ board up (pid ${MC_PID}, data dir ${MISSION_CONTROL_DIR})"
 
 # ── 2. Mock model (mock mode only) ─────────────────────────────────────────
 if [ "$MODE" = mock ]; then
