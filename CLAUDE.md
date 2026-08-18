@@ -341,7 +341,7 @@ dashboard/                   # Visual Kanban dashboard
 server/                      # Backend API server
 ├── index.js                 # Express + WebSocket server
 integrations/deepseek-harness/       # dsh bridge plugin + tests
-└── start-all.js             # Unified startup (server + bridge)
+└── start-all.js             # Startup wrapper (server only; bridge runs inside dsh)
 scripts/                     # CLI helper scripts
 skills/                      # Modular skill definitions (by role)
 docs/                        # Extended documentation
@@ -1297,9 +1297,8 @@ Mission Control includes a local Node.js server that powers the dashboard with r
 ```bash
 cd server
 npm install
-npm start          # Server only
-npm run bridge     # Agent bridge only (requires server running)
-npm run all        # Server + agent bridge together
+npm start          # Start the server (npm run all is an alias)
+# The dsh bridge runs inside DeepSeek-Harness as a plugin — no second process
 ```
 
 ### Server Features

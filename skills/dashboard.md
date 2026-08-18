@@ -20,10 +20,11 @@ The dashboard auto-detects which mode to use. If the API is unreachable, it fall
 ```bash
 cd server
 npm install
-npm start          # Server only
-npm run bridge     # Agent bridge only (requires server running)
-npm run all        # Server + agent bridge together
+npm start          # Start the server (npm run all is an alias)
 ```
+
+The DeepSeek-Harness bridge is not a separate process — it runs inside dsh as
+the `dsh-plugin-mission-control` plugin (see `integrations/deepseek-harness/`).
 
 The server starts at `http://localhost:3000`.
 

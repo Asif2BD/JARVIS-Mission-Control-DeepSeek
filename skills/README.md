@@ -19,9 +19,8 @@ Modular capability definitions for AI agents. Load only the skills relevant to y
 | **Orchestration** | [`orchestration.md`](orchestration.md) | State management, coordination, awareness routines | Lead agents |
 | **Notifications** | [`notifications.md`](notifications.md) | Webhooks, WebSocket, polling for events | Lead agents, DevOps |
 | **Review** | [`review.md`](review.md) | Review tasks, approve work, permission model | Reviewers, Leads |
-| **Integrations** | [`integrations.md`](integrations.md) | Telegram, Slack, Discord, external channels | Optional |
+| **Integrations** | [`integrations.md`](integrations.md) | External channels (planned for this edition) | Optional |
 | **MissionDeck API** | [`missiondeck-api.md`](missiondeck-api.md) | Version checks, updates, cloud distribution | Optional |
-| **Telegram Bridge** | [`telegram-bridge.md`](telegram-bridge.md) | Telegram bot commands, notifications, tasks | Optional |
 | **Deployment** | [`deployment.md`](deployment.md) | Make dashboard public (Cloudflare, ngrok, VPS) | Optional |
 | **DeepSeek-Harness Bridge** | [`deepseek-harness.md`](deepseek-harness.md) | Mirror dsh sessions onto the board (experimental) | Optional |
 

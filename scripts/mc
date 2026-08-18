@@ -13,7 +13,7 @@
  *   mc task:create --title "..." [--assignee <id>] [--priority <p>] [--labels <a,b>]
  *   mc task:done <id>
  *   mc agent:status <status>       (active|busy|idle)
- *   mc notify "<message>"          (send notification to humans/Telegram)
+ *   mc notify "<message>"          (broadcast a notification to humans)
  *   mc deliver "<title>" --path <file>
  *   mc squad                       (show all agents + statuses)
  *   mc feed                        (recent activity)
@@ -33,7 +33,6 @@ const os = require('os');
 // ── Config ─────────────────────────────────────────────────────────────────
 const SERVER_URL = process.env.MC_SERVER_URL || 'http://localhost:3000';
 const AGENT_ID   = process.env.MC_AGENT_ID   || detectAgentId();
-const TELEGRAM_CHAT = process.env.MC_TELEGRAM_CHAT || '';
 
 function detectAgentId() {
   // 1. Check .mc-agent file in cwd (for agents whose workspace is root-level)

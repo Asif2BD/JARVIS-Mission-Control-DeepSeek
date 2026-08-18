@@ -15,7 +15,6 @@
 server/
 ├── index.js            ← Main Express server — REST API + WebSocket + file watcher
 ├── (bridge lives in integrations/deepseek-harness/ — a dsh plugin, not a server process)
-├── telegram-bridge.js  ← Telegram bot integration
 ├── webhook-delivery.js ← Outgoing webhook delivery with retry
 ├── resource-manager.js ← Rate limiting & resource management
 ├── review-manager.js   ← Task review/approval logic
