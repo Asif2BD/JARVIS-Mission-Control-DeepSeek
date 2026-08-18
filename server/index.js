@@ -2750,6 +2750,9 @@ app.use(express.static(DASHBOARD_DIR));
 // EVENT FEED API (v2.0.0)
 // =====================================
 
+// SQLite cannot create missing parent directories — ensure the data dir
+// exists before opening events.db (fresh deployments, mounted volumes).
+require('fs').mkdirSync(MISSION_CONTROL_DIR, { recursive: true });
 const eventLogger = getEventLogger(path.join(MISSION_CONTROL_DIR, 'events.db'));
 
 // Wire up WebSocket broadcast for real-time events

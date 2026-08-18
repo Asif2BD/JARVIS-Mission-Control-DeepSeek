@@ -46,33 +46,50 @@ trap cleanup EXIT
 # ── 1. Mission Control server ───────────────────────────────────────────────
 echo "→ Installing server dependencies"
 (cd "$ROOT/server" && (npm ci --no-audit --no-fund 2>/dev/null || npm install --no-audit --no-fund) > /dev/null)
+# Refuse to run against a port that is already answering: any response
+# there would come from a foreign instance we must not write E2E data into.
+if curl -sf "http://127.0.0.1:${MC_PORT}/api/metrics" > /dev/null 2>&1; then
+  echo "❌ Port ${MC_PORT} is already serving a Mission Control API — pick another MC_PORT"
+  exit 1
+fi
 echo "→ Starting Mission Control on :${MC_PORT}"
+: > "$WORK/mc.log"
 (cd "$ROOT/server" && PORT="$MC_PORT" exec node index.js > "$WORK/mc.log" 2>&1) &
 MC_PID=$!
 PIDS+=("$MC_PID")
+# Readiness is tied to OUR process: its own log must report server_start AND
+# the PID must still be alive — a foreign responder can satisfy neither.
 for i in $(seq 1 20); do
-  curl -sf "http://127.0.0.1:${MC_PORT}/api/metrics" > /dev/null 2>&1 && break
+  if ! kill -0 "$MC_PID" 2>/dev/null; then
+    echo "❌ Mission Control process exited during startup"; tail -20 "$WORK/mc.log"; exit 1
+  fi
+  grep -q "server_start" "$WORK/mc.log" 2>/dev/null && break
   [ "$i" = 20 ] && { echo "❌ Mission Control did not start"; tail -20 "$WORK/mc.log"; exit 1; }
   sleep 1
 done
-# The health response must come from OUR server: if the port was already
-# occupied, our spawn died with EADDRINUSE and the response belongs to a
-# foreign instance we must not write E2E data into.
-if ! kill -0 "$MC_PID" 2>/dev/null; then
-  echo "❌ Port ${MC_PORT} answered but our server process is dead (port already in use?)"
-  tail -20 "$WORK/mc.log"
-  exit 1
-fi
+curl -sf "http://127.0.0.1:${MC_PORT}/api/metrics" > /dev/null || { echo "❌ board not answering after start"; exit 1; }
 echo "  ✓ board up (pid ${MC_PID}, data dir ${MISSION_CONTROL_DIR})"
 
 # ── 2. Mock model (mock mode only) ─────────────────────────────────────────
 if [ "$MODE" = mock ]; then
+  if curl -sf "http://127.0.0.1:${MOCK_LLM_PORT}/v1/models" > /dev/null 2>&1; then
+    echo "❌ Port ${MOCK_LLM_PORT} is already serving a model API — pick another MOCK_LLM_PORT"
+    exit 1
+  fi
   echo "→ Starting mock model on :${MOCK_LLM_PORT}"
+  : > "$WORK/mock-llm.log"
   MOCK_LLM_PORT="$MOCK_LLM_PORT" node "$ROOT/scripts/e2e-mock-llm.js" > "$WORK/mock-llm.log" 2>&1 &
-  PIDS+=($!)
-  sleep 1
-  curl -sf "http://127.0.0.1:${MOCK_LLM_PORT}/v1/models" > /dev/null || { echo "❌ mock model did not start"; exit 1; }
-  echo "  ✓ mock model up"
+  MOCK_PID=$!
+  PIDS+=("$MOCK_PID")
+  for i in $(seq 1 10); do
+    if ! kill -0 "$MOCK_PID" 2>/dev/null; then
+      echo "❌ mock model process exited during startup"; tail -5 "$WORK/mock-llm.log"; exit 1
+    fi
+    grep -q "listening" "$WORK/mock-llm.log" 2>/dev/null && break
+    [ "$i" = 10 ] && { echo "❌ mock model did not start"; tail -5 "$WORK/mock-llm.log"; exit 1; }
+    sleep 1
+  done
+  echo "  ✓ mock model up (pid ${MOCK_PID})"
 fi
 
 # ── 3. DeepSeek-Harness + bridge plugin ────────────────────────────────────
