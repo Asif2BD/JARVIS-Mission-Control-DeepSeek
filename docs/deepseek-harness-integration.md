@@ -44,7 +44,7 @@ Durable session events include `turn/start`, `turn/end`, `step/start`, `step/end
 | Agents | Many agents, humans, reviews, permissions | One harnessed agent per session (composable) |
 | UI | Kanban dashboard (`dashboard/`) | Local Web UI (`127.0.0.1:3080`) |
 
-**These are complementary, not competing.** dsh answers "how does one agent think, act, and log?" Mission Control answers "how do many agents and humans coordinate work?" That's exactly the relationship Mission Control already has with OpenClaw — where `server/agent-bridge.js` tails OpenClaw session JSONL files and turns them into tasks, statuses, and activity log entries.
+**These are complementary, not competing.** dsh answers "how does one agent think, act, and log?" Mission Control answers "how do many agents and humans coordinate work?" That's exactly the relationship the original Mission Control had with its first agent runtime — an external bridge process tailing session log files. 
 
 With dsh the equivalent bridge is *cleaner*, because instead of scraping session files we can subscribe to a typed event stream from inside the harness itself.
 
@@ -94,7 +94,7 @@ The plugin is deliberately defensive about the preview-stage API:
 
 ```bash
 # From a dsh checkout or any dsh profile:
-npm install /path/to/JARVIS-Mission-Control-OpenClaw/integrations/deepseek-harness/dsh-plugin-mission-control
+npm install /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
 ```
 
 Then mount it in your dsh profile/bundle config (YAML patch shown; adjust to your profile layout):
@@ -110,19 +110,14 @@ Then mount it in your dsh profile/bundle config (YAML patch shown; adjust to you
 
 Verify composition with `dsh --profile web --dump-config`, then run a session and watch tasks appear on the Mission Control board at `http://localhost:3000`.
 
-## 5. If You Still Want a Fork
+## 5. The Fork Happened — You're In It
 
-If the goal is a *product* fork ("JARVIS Mission Control for DeepSeek-Harness" as its own repo), do it like this:
-
-1. **Fork this repo, not deepseek-harness.** Name it e.g. `JARVIS-Mission-Control-DSH`. Mission Control is the product; dsh is a runtime you attach to.
-2. Keep `.mission-control/`, `server/`, and `dashboard/` intact — they are runtime-agnostic.
-3. Replace the OpenClaw-specific pieces:
-   - `server/agent-bridge.js` / `server/openclaw-sessions.js` → a `server/dsh-sessions.js` that talks to a dsh instance (or simply rely on the plugin in this directory pushing events in — that is the recommended data path).
-   - `skills/telegram-bridge.md` and OpenClaw wording in docs.
-4. Vendor `integrations/deepseek-harness/dsh-plugin-mission-control/` as the connection layer.
-5. Publish the plugin to npm with the `dsh-plugin` keyword/topic so the dsh ecosystem can find it independently of your fork.
-
-But start with the plugin from section 4 — it gets you a working dsh-powered Mission Control today, inside this repo, with no fork maintenance burden.
+This document was written inside the original OpenClaw-based repository as a
+feasibility analysis. The recommendation above was followed, and then the
+product fork was made anyway — as its own repo, not a fork of deepseek-harness:
+**this repository (JARVIS-Mission-Control-DeepSeek)** is the result. The board,
+server, and data model carried over; every runtime-specific piece now targets
+DeepSeek-Harness only, with the plugin from section 4 as the sole data path.
 
 ## 6. Known Unknowns (v0.1 preview)
 

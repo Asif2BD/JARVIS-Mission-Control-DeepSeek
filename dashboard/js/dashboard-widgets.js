@@ -40,30 +40,6 @@ function _setFCard(id, { main, mainClass, secondary, dot, time }) {
     if (timeEl && time !== undefined) timeEl.textContent = time;
 }
 
-// ── Claude Code Sessions ───────────────────────────────────────────────────
-
-let _claudeLastScan = null;
-
-async function refreshClaudeWidget() {
-    try {
-        const res = await fetch('/api/claude/sessions');
-        if (!res.ok) throw new Error('no data');
-        const data = await res.json();
-        _claudeLastScan = new Date().toISOString();
-        const active = data.activeCount || 0;
-        const total  = data.total || 0;
-        _setFCard('claude', {
-            main: active,
-            mainClass: active > 0 ? '' : '',
-            secondary: `${total} total`,
-            dot: active > 0 ? 'healthy' : 'warning',
-            time: `Last scan: ${_timeAgo(_claudeLastScan)}`,
-        });
-    } catch {
-        _setFCard('claude', { main: '?', secondary: 'unavailable', dot: 'error', time: 'Last scan: failed' });
-    }
-}
-
 // ── CLI Connections ────────────────────────────────────────────────────────
 
 let _cliLastScan = null;
@@ -149,7 +125,6 @@ async function refreshWebhooksWidget() {
 
 async function refreshAllWidgets() {
     await Promise.allSettled([
-        refreshClaudeWidget(),
         refreshCliWidget(),
         refreshGithubWidget(),
         refreshWebhooksWidget(),

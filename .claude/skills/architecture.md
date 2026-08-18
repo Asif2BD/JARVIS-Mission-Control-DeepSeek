@@ -14,7 +14,7 @@
 ```
 server/
 ├── index.js            ← Main Express server — REST API + WebSocket + file watcher
-├── agent-bridge.js     ← Watches OpenClaw JSONL sessions, auto-creates MC task cards
+├── (bridge lives in integrations/deepseek-harness/ — a dsh plugin, not a server process)
 ├── telegram-bridge.js  ← Telegram bot integration
 ├── webhook-delivery.js ← Outgoing webhook delivery with retry
 ├── resource-manager.js ← Rate limiting & resource management
@@ -60,7 +60,7 @@ skills/                 ← Modular skill docs (user-facing)
 1. **File watcher (Chokidar)** monitors `.mission-control/**/*.json`
 2. On file change → **WebSocket broadcast** to all connected dashboard clients
 3. **REST API** for CRUD — agents use this to create/update tasks
-4. **Agent Bridge** (`agent-bridge.js`) — reads OpenClaw JSONL session logs, auto-creates task cards when Telegram messages mention bot names (idempotent via `message_id` dedup)
+4. **dsh Bridge** (`integrations/deepseek-harness/dsh-plugin-mission-control`) — a Cordis plugin mounted inside DeepSeek-Harness; mirrors the session event stream to this server's REST API (tasks, activity log, statuses)
 5. **Webhook delivery** — notifies registered agent endpoints on events
 
 ## CSRF Protection

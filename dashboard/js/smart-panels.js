@@ -312,7 +312,7 @@ async function _loadSchedules() {
     if (loading) loading.textContent = 'Loading…';
 
     try {
-        // Use /api/schedules which merges local queue + OpenClaw cron jobs
+        // Use /api/schedules (local queue jobs)
         const resp = await fetch('/api/schedules', {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });

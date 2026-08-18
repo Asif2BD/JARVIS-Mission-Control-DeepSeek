@@ -4,7 +4,7 @@
 # Usage: ./mc-task.sh update <task-id> <status> [result]
 
 MC_URL="${MC_SERVER_URL:-http://localhost:3000}"
-MC_DIR="${MISSION_CONTROL_DIR:-/root/.openclaw/workspace/agents/tank/mission-control/.mission-control}"
+MC_DIR="${MISSION_CONTROL_DIR:-$(pwd)/.mission-control}"
 
 create_task() {
     local title="$1"

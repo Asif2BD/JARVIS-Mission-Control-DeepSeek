@@ -35,7 +35,7 @@ The server starts at `http://localhost:3000`.
 | REST API | `http://localhost:3000/api/*` | CRUD operations |
 | WebSocket | `ws://localhost:3000/ws` | Real-time event stream |
 | File Watcher | — | Auto-detects JSON file changes |
-| Agent Bridge | — | Monitors OpenClaw sessions, auto-creates tasks |
+| dsh Bridge | — | Plugin inside DeepSeek-Harness mirrors sessions to the board |
 
 ### How It Works
 

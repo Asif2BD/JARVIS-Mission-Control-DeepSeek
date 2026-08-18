@@ -3,14 +3,12 @@ module.exports = {
     {
       name: 'mission-control-server',
       script: 'server/index.js',
-      cwd: '/root/.openclaw/workspace/agents/tank/mission-control',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
-        MC_AUTH_USER: 'architect',
-        MC_AUTH_PASS: process.env.MC_AUTH_PASS,
-        MC_AGENT_TOKEN: process.env.MC_AGENT_TOKEN,
-        OPENCLAW_GATEWAY_TOKEN: process.env.OPENCLAW_GATEWAY_TOKEN
+        PORT: process.env.PORT || 3000,
+        // Set these in the shell or a process manager secret store — never commit values:
+        //   MC_AUTH_USER, MC_AUTH_PASS  — dashboard basic auth
+        //   MC_AGENT_TOKEN              — bearer token for agent API access (dsh plugin)
       }
     }
   ]

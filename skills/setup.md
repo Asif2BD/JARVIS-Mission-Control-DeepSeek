@@ -8,8 +8,8 @@ How to get Mission Control running from a clone, fork, or ZIP download.
 
 ```bash
 # Fork on GitHub, then clone YOUR fork
-git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-OpenClaw.git
-cd JARVIS-Mission-Control-OpenClaw
+git clone https://github.com/YOUR-USERNAME/JARVIS-Mission-Control-DeepSeek.git
+cd JARVIS-Mission-Control-DeepSeek
 ```
 
 ## From ZIP Download

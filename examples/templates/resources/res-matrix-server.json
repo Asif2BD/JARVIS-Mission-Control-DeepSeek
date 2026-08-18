@@ -3,7 +3,7 @@
   "name": "Matrix Zion Server",
   "type": "compute",
   "status": "active",
-  "description": "Primary server hosting OpenClaw agents and services. Ubuntu Linux with 16GB RAM.",
+  "description": "Primary server hosting agents and services. Ubuntu Linux with 16GB RAM.",
   "config": {
     "hostname": "matrix-zion",
     "os": "Ubuntu Linux 6.8.0-90-generic",
