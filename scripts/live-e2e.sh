@@ -14,9 +14,9 @@
 # Env knobs: DSH_VERSION (default 0.1.0-rc.7), MC_PORT (default 3556),
 #            MOCK_LLM_PORT (default 4517), E2E_WORKDIR (default mktemp).
 #
-# Intended for CI on a fresh checkout: it starts the repo's server, which
-# writes E2E artifacts into .mission-control/. On a working copy, artifacts
-# are cleaned up on exit, but prefer a scratch clone.
+# Safe on working installations: the server writes E2E artifacts into this
+# checkout's .mission-control/, and cleanup removes ONLY files created during
+# this run (pre-existing data is snapshotted and never deleted).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,12 +31,19 @@ if [ -n "${DEEPSEEK_API_KEY:-}" ]; then MODE=real; fi
 echo "── live-e2e: mode=${MODE} dsh=${DSH_VERSION} workdir=${WORK}"
 
 PIDS=()
+DATA_DIR="$ROOT/.mission-control"
+SNAPSHOT="$WORK/data-files-before.txt"
+# Snapshot the data dir BEFORE anything runs: cleanup deletes only files that
+# this run created, so a working installation's history is never touched.
+# (Files that pre-existed and were appended to, like an existing activity
+# log, are left in place.)
+find "$DATA_DIR" -type f 2>/dev/null | sort > "$SNAPSHOT" || true
 cleanup() {
   for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done
-  rm -f "$ROOT"/.mission-control/tasks/task-*-dsh-*.json \
-        "$ROOT"/.mission-control/agents/agent-dsh-e2e.json \
-        "$ROOT"/.mission-control/messages/msg-*.json \
-        "$ROOT"/.mission-control/logs/*.log 2>/dev/null || true
+  if [ -f "$SNAPSHOT" ]; then
+    find "$DATA_DIR" -type f 2>/dev/null | sort | comm -13 "$SNAPSHOT" - | \
+      while IFS= read -r f; do rm -f "$f"; done
+  fi
 }
 trap cleanup EXIT
 
