@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server-tests:
+    name: Server tests (jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install root dependencies
+        run: npm ci || npm install --no-audit --no-fund
+      - name: Syntax checks
+        run: |
+          node --check server/index.js
+          node --check server/start-all.js
+          node --check ecosystem.config.cjs
+      - name: Run jest suite
+        run: npx jest --ci
+
+  plugin-tests:
+    name: dsh plugin tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    defaults:
+      run:
+        working-directory: integrations/deepseek-harness/dsh-plugin-mission-control
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run plugin test suite
+        run: npm test
+
+  server-boot:
+    name: Server boot smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci || npm install --no-audit --no-fund
+      - name: Boot server and probe endpoints
+        run: |
+          (cd server && PORT=3999 node index.js &)
+          sleep 5
+          curl -sf http://localhost:3999/api/metrics > /dev/null
+          curl -sf http://localhost:3999/api/costs | grep -q '"todayCost":0'
+          curl -sf http://localhost:3999/api/schedules > /dev/null
+          curl -sf http://localhost:3999/api/agents > /dev/null
+          # List-cache coherence: the server's own writes must be visible
+          # immediately, without relying on fs watcher events (regression
+          # found during live dsh E2E validation)
+          BEFORE=$(curl -sf http://localhost:3999/api/tasks | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          curl -sf -X POST http://localhost:3999/api/tasks -H 'Content-Type: application/json' \
+            -d '{"id":"task-ci-cache-check","title":"ci cache check","status":"INBOX","created_by":"ci"}' > /dev/null
+          AFTER=$(curl -sf http://localhost:3999/api/tasks | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          [ "$AFTER" -eq $((BEFORE + 1)) ] || { echo "list cache stale after POST ($BEFORE -> $AFTER)"; exit 1; }
+          curl -sf -X DELETE http://localhost:3999/api/tasks/task-ci-cache-check > /dev/null
+          FINAL=$(curl -sf http://localhost:3999/api/tasks | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          [ "$FINAL" -eq "$BEFORE" ] || { echo "list cache stale after DELETE ($AFTER -> $FINAL)"; exit 1; }
+          echo "server boot + cache coherence OK"

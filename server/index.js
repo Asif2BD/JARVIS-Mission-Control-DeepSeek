@@ -323,6 +323,15 @@ async function writeJsonFile(filePath, data) {
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
     await fs.writeFile(fullPath, JSON.stringify(data, null, 2));
+
+    // Keep the directory list cache coherent for the server's own writes.
+    // The chokidar watcher also updates it, but fs events can be missed or
+    // delayed (containers, network mounts), which left freshly written items
+    // invisible to list endpoints for up to CACHE_TTL_MS.
+    const parts = filePath.split('/');
+    if (parts.length === 2 && parts[1].endsWith('.json')) {
+        updateCacheItem(parts[0], parts[1], data, 'updated');
+    }
     return data;
 }
 
@@ -335,6 +344,12 @@ async function deleteJsonFile(filePath) {
         throw new Error('Path traversal attempt blocked');
     }
     await fs.unlink(fullPath);
+
+    // Mirror of the writeJsonFile cache update — see comment there.
+    const parts = filePath.split('/');
+    if (parts.length === 2 && parts[1].endsWith('.json')) {
+        updateCacheItem(parts[0], parts[1], null, 'deleted');
+    }
 }
 
 /**
