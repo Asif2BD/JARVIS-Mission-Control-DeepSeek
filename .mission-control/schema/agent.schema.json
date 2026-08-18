@@ -80,7 +80,7 @@
         },
         "session_id": {
           "type": ["string", "null"],
-          "description": "OpenClaw session identifier"
+          "description": "Agent-runtime session identifier (e.g. a dsh session id)"
         },
         "contact": {
           "type": ["string", "null"],

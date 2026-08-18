@@ -19,7 +19,6 @@ If a check fails, fix it before continuing. Do not open a PR with known failures
 ```bash
 # 1. Syntax check — catch obvious errors
 node --check server/index.js
-node --check server/agent-bridge.js 2>/dev/null || true
 
 # 2. JSON validation — validate any task/agent files you modified
 for f in .mission-control/tasks/*.json .mission-control/agents/*.json; do

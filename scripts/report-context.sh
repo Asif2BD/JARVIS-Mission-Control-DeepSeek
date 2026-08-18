@@ -1,10 +1,10 @@
 #!/bin/bash
 # report-context.sh — agent reports context window usage to local Mission Control
-# Called from OpenClaw heartbeat or cron.
+# Called from a cron job or agent heartbeat.
 #
 # Usage: ./scripts/report-context.sh <agent_id> <tokens_used> <tokens_total> [model]
 #
-# Example (from OpenClaw heartbeat via exec tool):
+# Example (from a cron job or agent exec tool):
 #   ./scripts/report-context.sh oracle 45000 200000 claude-sonnet-4-6
 #
 # Or use environment variables:

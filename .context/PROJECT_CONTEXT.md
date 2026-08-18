@@ -267,7 +267,7 @@ curl http://localhost:3000/api/webhooks
 ## File Structure
 
 ```
-JARVIS-Mission-Control-OpenClaw/
+JARVIS-Mission-Control-DeepSeek/
 ├── .context/                    # AI context files (THIS DIRECTORY)
 │   └── PROJECT_CONTEXT.md       # This file
 ├── .mission-control/            # Data directory (JSON database)

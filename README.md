@@ -9,7 +9,7 @@
 
 JARVIS Mission Control is a Git-based command center for managing AI agents and human collaborators: a live Kanban board, task manager, activity log, messaging layer, and review workflow — backed by plain JSON files and a Node.js server. This edition connects it to **DeepSeek-Harness (`dsh`)**, the plugin-kernel agent harness from DeepSeek: every dsh session appears as a task on your board, every turn and tool call streams into the activity log, and finished work lands in `REVIEW` for a human to approve.
 
-> **Status: Experimental.** dsh is a v0.1 developer preview with announced breaking changes. The bridge is validated against `@deepseek-ai/dsh@0.1.0-rc.7` type definitions and covered by committed tests; event names are config-overridable so upstream renames are a config fix. This repo is a sibling of [JARVIS-Mission-Control-OpenClaw](https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw) — same engine, different agent runtime.
+> **Status: Experimental.** dsh is a v0.1 developer preview with announced breaking changes. The bridge is validated against `@deepseek-ai/dsh@0.1.0-rc.7` type definitions and covered by committed tests; event names are config-overridable so upstream renames are a config fix. 
 
 ---
 
@@ -92,10 +92,10 @@ This open-source repo is the engine. [MissionDeck.ai](https://missiondeck.ai) is
 
 ## Heritage & Roadmap
 
-This repo is a port of [JARVIS-Mission-Control-OpenClaw](https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw) (v2.1.0). The board, server, and data model are runtime-agnostic and carry over intact; the OpenClaw-specific bridges (`server/agent-bridge.js`, `server/openclaw-sessions.js`, Telegram session parsing) are still present and will be replaced or made optional as the dsh integration matures. See the repo issues for the port roadmap:
+This project began as a port of [JARVIS Mission Control](https://github.com/Asif2BD/JARVIS-Mission-Control-OpenClaw) (v2.1.0); the board, server, and data model carry over, and everything runtime-specific here targets DeepSeek-Harness only. See the repo issues for the roadmap:
 
 1. Live end-to-end validation with a real `DEEPSEEK_API_KEY`
-2. Replace/gate the OpenClaw-specific server bridges
+2. dsh-native cost tracking (per-step `usage` from `assistant/message` events → the dashboard cost cards)
 3. Publish `dsh-plugin-mission-control` to npm with the `dsh-plugin` topic + CI against a pinned dsh release
 
 ## License
