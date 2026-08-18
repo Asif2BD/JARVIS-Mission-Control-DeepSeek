@@ -39,7 +39,11 @@ function sanitizeInput(val) {
 
 // Configuration
 const PORT = process.env.PORT || 3000;
-const MISSION_CONTROL_DIR = path.join(__dirname, '..', '.mission-control');
+// Data directory: overridable via env (used by the live E2E to run against an
+// isolated directory, and by deployments that keep data outside the checkout).
+const MISSION_CONTROL_DIR = process.env.MISSION_CONTROL_DIR
+    ? path.resolve(process.env.MISSION_CONTROL_DIR)
+    : path.join(__dirname, '..', '.mission-control');
 const DASHBOARD_DIR = path.join(__dirname, '..', 'dashboard');
 
 // Initialize Express
@@ -2746,7 +2750,10 @@ app.use(express.static(DASHBOARD_DIR));
 // EVENT FEED API (v2.0.0)
 // =====================================
 
-const eventLogger = getEventLogger();
+// SQLite cannot create missing parent directories — ensure the data dir
+// exists before opening events.db (fresh deployments, mounted volumes).
+require('fs').mkdirSync(MISSION_CONTROL_DIR, { recursive: true });
+const eventLogger = getEventLogger(path.join(MISSION_CONTROL_DIR, 'events.db'));
 
 // Wire up WebSocket broadcast for real-time events
 eventLogger.on('event', (event) => {
@@ -2895,9 +2902,12 @@ app.get('*', (req, res) => {
 // =====================================
 
 server.listen(PORT, () => {
-    // Load .missiondeck env file if present and not already set
+    // Load .missiondeck env file if present and not already set.
+    // MISSIONDECK_SYNC=off disables cloud sync entirely (used by the live
+    // E2E so a test server can never push data to a production workspace).
+    const missionDeckSyncDisabled = process.env.MISSIONDECK_SYNC === 'off';
     const missionDeckEnvFile = path.join(__dirname, '..', '.missiondeck');
-    if (!process.env.MISSIONDECK_API_KEY && require('fs').existsSync(missionDeckEnvFile)) {
+    if (!missionDeckSyncDisabled && !process.env.MISSIONDECK_API_KEY && require('fs').existsSync(missionDeckEnvFile)) {
         require('fs').readFileSync(missionDeckEnvFile, 'utf8')
             .split('\n')
             .filter(l => l && !l.startsWith('#'))
@@ -2908,7 +2918,7 @@ server.listen(PORT, () => {
     }
 
     // Start MissionDeck sync if configured
-    if (process.env.MISSIONDECK_API_KEY) {
+    if (!missionDeckSyncDisabled && process.env.MISSIONDECK_API_KEY) {
         const { startMissionDeckSync, startCloudPull } = require('./missiondeck-sync');
         startMissionDeckSync({
             missionControlDir: MISSION_CONTROL_DIR,
