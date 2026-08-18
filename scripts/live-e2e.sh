@@ -113,6 +113,17 @@ npm init -y > /dev/null
 npm install "@deepseek-ai/dsh@${DSH_VERSION}" --no-audit --no-fund > /dev/null
 
 export DSH_HOME="$WORK/dsh-home"
+# `dsh plugin add` shells out to pnpm to manage profile plugins; fresh
+# machines (and GitHub-hosted runners) don't ship it, so bootstrap a copy
+# under the workdir. Not `npm install -g`: on machines with a system-owned
+# npm prefix that dies with EACCES, and it would mutate the user's global
+# environment. The exported PATH reaches dsh's pnpm subprocess.
+if ! command -v pnpm > /dev/null 2>&1; then
+  echo "→ pnpm not found — installing a workdir-local copy (required by 'dsh plugin add')"
+  npm install --prefix "$WORK/pnpm-local" pnpm --no-audit --no-fund > /dev/null
+  export PATH="$WORK/pnpm-local/node_modules/.bin:$PATH"
+  command -v pnpm > /dev/null 2>&1 || { echo "❌ pnpm still missing after install"; exit 1; }
+fi
 echo "→ Installing the bridge plugin into the headless profile (self-activating)"
 npx dsh plugin --profile headless add "$ROOT/integrations/deepseek-harness/dsh-plugin-mission-control" > /dev/null
 
