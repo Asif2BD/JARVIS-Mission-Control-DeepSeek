@@ -1,0 +1,49 @@
+name: live E2E (dsh + bridge + board)
+
+# Runs scripts/live-e2e.sh: a real DeepSeek-Harness headless session with the
+# bridge plugin mounted, asserting actual Mission Control board state.
+#
+# Mode is auto-selected by the script:
+#   - mock (default): local mock model — validates everything the bridge owns
+#   - real: when the DEEPSEEK_API_KEY repository secret is set and the
+#     `real` input is true — one green run closes issue #1
+
+on:
+  workflow_dispatch:
+    inputs:
+      real:
+        description: 'Use the real DeepSeek API (requires DEEPSEEK_API_KEY secret)'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '30 6 * * 1' # weekly, right after the contract canary
+  push:
+    branches: [main]
+    paths:
+      - 'integrations/deepseek-harness/**'
+      - 'scripts/live-e2e.sh'
+      - 'scripts/e2e-mock-llm.js'
+      - 'server/**'
+
+jobs:
+  live-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require the API key for a requested real run
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.real }}
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          if [ -z "$DEEPSEEK_API_KEY" ]; then
+            echo "::error::real=true was requested but the DEEPSEEK_API_KEY secret is missing/empty. Refusing to silently fall back to mock mode."
+            exit 1
+          fi
+      - name: Run live E2E
+        env:
+          DEEPSEEK_API_KEY: ${{ (github.event_name == 'workflow_dispatch' && inputs.real) && secrets.DEEPSEEK_API_KEY || '' }}
+        run: bash scripts/live-e2e.sh
