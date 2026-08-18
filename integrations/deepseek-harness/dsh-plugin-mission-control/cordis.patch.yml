@@ -1,0 +1,11 @@
+# Bundle patch: activates the Mission Control bridge as a profile layer when
+# the plugin is installed via `dsh plugin --profile <name> add`. Defaults are
+# env-overridable; pin them per profile in its cordis.patch.yml (or a --patch
+# overlay) by addressing the row id `mission-control`.
+- insert:
+    - id: mission-control
+      name: dsh-plugin-mission-control
+      config:
+        missionControlUrl: !!js process.env.MISSION_CONTROL_URL || 'http://localhost:3000'
+        agentId: !!js process.env.MC_AGENT_ID || 'agent-dsh'
+        authToken: !!js process.env.MC_AGENT_TOKEN || null

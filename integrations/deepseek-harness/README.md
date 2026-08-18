@@ -35,24 +35,20 @@ Connect a [DeepSeek-Harness](https://github.com/deepseek-ai/deepseek-harness) (`
 # 1. Start Mission Control as usual
 cd server && npm install && npm start        # http://localhost:3000
 
-# 2. Install the plugin into your dsh setup
-npm install /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
+# 2. Install the plugin into your dsh profile — it self-activates via its
+#    dsh.bundle declaration, no manual config rows needed
+npx dsh plugin --profile web add /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
 
-# 3. Mount it in your dsh profile (cordis.patch.yml or equivalent)
-```
+# 3. (Optional) point it somewhere else via environment variables
+export MISSION_CONTROL_URL=http://localhost:3000   # default
+export MC_AGENT_ID=agent-dsh                       # default
+export MC_AGENT_TOKEN=...                          # only if your board requires auth
 
-```yaml
-- name: dsh-plugin-mission-control
-  config:
-    missionControlUrl: http://localhost:3000
-    agentId: agent-dsh
-    agentName: DeepSeek Harness
-```
-
-```bash
 # 4. Run dsh and watch the board
 npx @deepseek-ai/dsh web
 ```
+
+To pin config per profile instead of env vars, address the row id `mission-control` in the profile's `cordis.patch.yml` (a `{id, config}` entry overrides the bundle defaults).
 
 ## Configuration
 
