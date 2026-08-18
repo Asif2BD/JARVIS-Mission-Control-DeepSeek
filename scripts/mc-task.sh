@@ -4,7 +4,14 @@
 # Usage: ./mc-task.sh update <task-id> <status> [result]
 
 MC_URL="${MC_SERVER_URL:-http://localhost:3000}"
-MC_DIR="${MISSION_CONTROL_DIR:-$(pwd)/.mission-control}"
+# Default to this checkout's .mission-control, regardless of the caller's cwd
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MC_DIR="${MISSION_CONTROL_DIR:-$REPO_ROOT/.mission-control}"
+
+if [ ! -d "$MC_DIR/tasks" ]; then
+    echo "Error: $MC_DIR/tasks does not exist (set MISSION_CONTROL_DIR)" >&2
+    exit 1
+fi
 
 create_task() {
     local title="$1"
