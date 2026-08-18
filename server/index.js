@@ -2619,7 +2619,15 @@ function isValidSoulFile(filename) {
  */
 app.get('/api/agents/list', async (req, res) => {
     try {
-        const entries = await fs.readdir(AGENTS_WORKSPACE_DIR, { withFileTypes: true });
+        let entries;
+        try {
+            entries = await fs.readdir(AGENTS_WORKSPACE_DIR, { withFileTypes: true });
+        } catch (e) {
+            // Optional feature: the workspace dir only exists when AGENTS_DIR is
+            // configured (or agents-workspace/ created). Empty list, not an error.
+            if (e.code === 'ENOENT') return res.json({ agents: [], count: 0, workspaceDir: AGENTS_WORKSPACE_DIR, configured: false });
+            throw e;
+        }
         const agents = [];
         for (const entry of entries) {
             if (!entry.isDirectory()) continue;
