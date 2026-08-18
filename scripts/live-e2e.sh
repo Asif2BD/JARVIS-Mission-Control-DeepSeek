@@ -20,7 +20,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORK="${E2E_WORKDIR:-$(mktemp -d)}"
+# Caller-supplied E2E_WORKDIR is preserved across runs (caches the dsh
+# install); a script-created mktemp dir is removed on exit.
+if [ -n "${E2E_WORKDIR:-}" ]; then
+  WORK="$E2E_WORKDIR"; WORK_CREATED=0
+else
+  WORK="$(mktemp -d)"; WORK_CREATED=1
+fi
 mkdir -p "$WORK"
 DSH_VERSION="${DSH_VERSION:-0.1.0-rc.7}"
 MC_PORT="${MC_PORT:-3556}"
@@ -31,8 +37,11 @@ if [ -n "${DEEPSEEK_API_KEY:-}" ]; then MODE=real; fi
 echo "── live-e2e: mode=${MODE} dsh=${DSH_VERSION} workdir=${WORK}"
 
 PIDS=()
-# Isolated data directory: the server never touches the checkout's data.
-export MISSION_CONTROL_DIR="$WORK/mc-data"
+# Isolated, PER-RUN data directory: the server never touches the checkout's
+# data, and a reused workdir cannot leak a previous run's tasks/agents into
+# this run's assertions.
+export MISSION_CONTROL_DIR="$WORK/mc-data.$$"
+rm -rf "$MISSION_CONTROL_DIR"
 mkdir -p "$MISSION_CONTROL_DIR"/{tasks,agents,humans,messages,queue,logs}
 # Never let the test server sync to a MissionDeck cloud workspace, even on a
 # checkout that is connected (env key or .missiondeck file present).
@@ -40,6 +49,8 @@ export MISSIONDECK_SYNC=off
 unset MISSIONDECK_API_KEY MISSIONDECK_SLUG 2>/dev/null || true
 cleanup() {
   for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done
+  rm -rf "$MISSION_CONTROL_DIR" 2>/dev/null || true
+  if [ "${WORK_CREATED}" = 1 ]; then rm -rf "$WORK" 2>/dev/null || true; fi
 }
 trap cleanup EXIT
 
@@ -146,7 +157,7 @@ AGENTS=$(curl -sf "http://127.0.0.1:${MC_PORT}/api/agents")
 echo "$TASKS" | python3 -c '
 import json, sys
 tasks = [t for t in json.load(sys.stdin) if "dsh" in t.get("labels", [])]
-assert tasks, "no dsh task on the board"
+assert len(tasks) == 1, "expected exactly 1 dsh task from this run, got " + str(len(tasks))
 t = tasks[0]
 assert t["status"] == "REVIEW", "expected REVIEW, got " + str(t["status"])
 assert t["assignee"] == "agent-dsh-e2e", "unexpected assignee " + str(t["assignee"])
