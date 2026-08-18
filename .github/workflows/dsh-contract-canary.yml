@@ -1,0 +1,88 @@
+name: dsh contract canary
+
+# Guards the bridge against DeepSeek-Harness preview churn. Two legs:
+#   - baseline: the pinned, validated version — proves the checks themselves
+#     still match what the bridge was built against
+#   - latest: the newest published version — fails when an upstream release
+#     changes any event name or payload member the bridge consumes
+# A `latest` failure usually means a one-line fix in the plugin's `events`
+# config defaults or a payload-path update in src/index.js, then a bump of
+# DSH_PINNED_VERSION after re-validation.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+env:
+  DSH_PINNED_VERSION: 0.1.0-rc.7
+
+jobs:
+  contract-check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [baseline, latest]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve version for this leg
+        id: ver
+        run: |
+          if [ "${{ matrix.channel }}" = "latest" ]; then
+            echo "version=$(npm view @deepseek-ai/dsh-session version)" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${DSH_PINNED_VERSION}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install dsh session + llm packages
+        run: |
+          mkdir probe && cd probe && npm init -y > /dev/null
+          npm install "@deepseek-ai/dsh-session@${{ steps.ver.outputs.version }}" --no-audit --no-fund
+      - name: Check the exact contract the bridge consumes
+        working-directory: probe
+        run: |
+          SESSION=node_modules/@deepseek-ai/dsh-session/lib/types
+          LLM=node_modules/@deepseek-ai/dsh-llm/lib/types
+          fail=0
+          check() { # check <dir> <pattern> <what>
+            if grep -rq "$2" "$1"; then echo "ok: $3"; else echo "MISSING: $3 (pattern: $2)"; fail=1; fi
+          }
+          # Event channel + listener contract (src/index.js subscribes to these)
+          check "$SESSION" "'session/event'"    "session/event channel"
+          check "$SESSION" "'session/created'"  "session/created hook"
+          check "$SESSION" "'session/disposed'" "session/disposed hook"
+          check "$SESSION" "'session/flush'"    "session/flush checkpoint"
+          # SessionEventMap members
+          check "$SESSION" "'turn/start'"        "turn/start event"
+          check "$SESSION" "'turn/end'"          "turn/end event"
+          check "$SESSION" "'user/message'"      "user/message event"
+          check "$SESSION" "'assistant/message'" "assistant/message event"
+          check "$SESSION" "'tool/call'"         "tool/call event"
+          check "$SESSION" "'tool/result'"       "tool/result event"
+          # Payload members the bridge reads (exact paths in src/index.js)
+          check "$SESSION" "data: SessionEventMap"      "{type,seq,time,data} wrapper (event.data)"
+          check "$SESSION" "turn: number"               "data.turn"
+          check "$SESSION" "reason: TurnEndReason"      "data.reason on turn/end"
+          check "$SESSION" "kind: 'completed'"          "reason.kind completed variant"
+          check "$SESSION" "kind: 'blocked'"            "reason.kind blocked variant"
+          check "$SESSION" "kind: 'aborted'"            "reason.kind aborted variant"
+          check "$SESSION" "kind: 'interrupted'"        "reason.kind interrupted variant"
+          check "$SESSION" "message: AssistantMessage"  "data.message on assistant/message"
+          check "$SESSION" "message: ToolResultMessage" "data.message on tool/result"
+          check "$SESSION" "name: string"               "data.name on tool/call"
+          check "$SESSION" "error?: {"                  "data.error on tool/result"
+          check "$SESSION" "'user/message': UserMessage" "user/message data is the UserMessage"
+          # Message content shape (dsh-llm, pulled in as a dsh-session dependency)
+          check "$LLM" "content: ContentBlock\[\]" "message.content is ContentBlock[]"
+          check "$LLM" "type: 'text'"              "TextBlock discriminator"
+          check "$LLM" "text: string"              "TextBlock.text"
+          exit $fail
+      - name: Report drift between baseline and latest
+        if: matrix.channel == 'latest'
+        run: |
+          LATEST="${{ steps.ver.outputs.version }}"
+          if [ "$LATEST" != "${DSH_PINNED_VERSION}" ]; then
+            echo "::notice::Latest dsh-session is ${LATEST} (pinned baseline: ${DSH_PINNED_VERSION}). Contract checks above ran against ${LATEST} — if they passed, bumping the pin is safe."
+          fi
