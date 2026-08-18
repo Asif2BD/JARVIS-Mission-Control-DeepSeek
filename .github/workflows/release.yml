@@ -49,16 +49,27 @@ jobs:
           npm pack --dry-run 2>&1 | tee pack.txt
           grep -q "README.md" pack.txt || { echo "::error::README missing from tarball"; exit 1; }
           grep -q "cordis.patch.yml" pack.txt || { echo "::error::bundle patch missing from tarball"; exit 1; }
-      - name: Create tag + GitHub release
+      - name: Create tag + GitHub release (at the validated commit)
         if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ steps.ver.outputs.tag }}" \
+            --target "$GITHUB_SHA" \
             --title "dsh-plugin-mission-control ${{ steps.ver.outputs.version }}" \
             --generate-notes \
             --notes "Publishes \`dsh-plugin-mission-control@${{ steps.ver.outputs.version }}\` to npm (via the npm-publish workflow). Validated against \`@deepseek-ai/dsh@0.1.0-rc.7\`."
-          echo "Release created — npm-publish.yml takes it from here (requires NPM_TOKEN secret)."
+      - name: Trigger npm publish at the tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Releases created with GITHUB_TOKEN do not fire `release: published`
+        # workflow runs (documented Actions limitation) — but workflow_dispatch
+        # IS allowed, so invoke the publish workflow directly, pinned to the
+        # freshly created tag so it builds exactly the validated contents.
+        run: |
+          gh workflow run npm-publish.yml --ref "${{ steps.ver.outputs.tag }}"
+          echo "npm-publish dispatched at ${{ steps.ver.outputs.tag }} (requires NPM_TOKEN secret)."
       - name: Dry-run summary
         if: ${{ inputs.dry_run }}
         run: echo "Dry run only — would have created tag ${{ steps.ver.outputs.tag }} and its GitHub release."
