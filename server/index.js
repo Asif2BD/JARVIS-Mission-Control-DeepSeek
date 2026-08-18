@@ -2892,7 +2892,7 @@ server.listen(PORT, () => {
             apiKey: process.env.MISSIONDECK_API_KEY,
             clientVersion: '1.0.1',
         });
-        // Pull cloud-created tasks back to local so agents get Telegram notifications
+        // Pull cloud-created tasks back to local so agents get notified
         if (process.env.MISSIONDECK_SLUG) {
             startCloudPull({
                 missionControlDir: MISSION_CONTROL_DIR,

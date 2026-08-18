@@ -165,7 +165,7 @@ let lastPullAt = new Date(0); // epoch = pull everything on first run
  * Start polling MissionDeck cloud for tasks created/updated from the dashboard.
  * Any cloud-originated tasks are written to the local tasks directory so the
  * file watcher (chokidar in server/index.js) picks them up and fires
- * task.created / task.updated → WebSocket broadcast + webhooks → Telegram.
+ * task.created / task.updated → WebSocket broadcast + webhooks.
  *
  * @param {object} opts
  * @param {string} opts.missionControlDir

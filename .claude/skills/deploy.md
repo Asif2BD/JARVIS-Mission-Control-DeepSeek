@@ -67,7 +67,6 @@ Stored in `ecosystem.config.cjs` — do not hardcode in source files.
 
 Key vars:
 - `PORT` — server port (default 3000)
-- `TELEGRAM_BOT_TOKEN` — Telegram bridge token
 - `MISSIONDECK_API_KEY` — MissionDeck sync key
 - `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` — external access credentials (see credentials file)
 

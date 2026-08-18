@@ -8,7 +8,7 @@ How to connect Mission Control to external communication channels.
 
 | Channel | Type | Status |
 |---------|------|--------|
-| Telegram | Bot / User | Supported |
+| Telegram | Bot / User | Planned |
 | Slack | Workspace | Supported |
 | Discord | Server | Supported |
 | WhatsApp | Business API | Supported |
@@ -89,12 +89,10 @@ outgoing:
 
 ## Telegram Setup
 
-1. Copy `.mission-control/integrations/telegram.example.yaml` to `telegram.yaml`
-2. Add your bot token from @BotFather
-3. Configure channel mappings (chat IDs to agents/humans)
-4. Set up webhook URL or enable polling
-
-See `.mission-control/integrations/README.md` for detailed instructions.
+> **Not ported to this edition yet.** The Telegram bridge was part of the
+> original runtime integration and was removed in the DeepSeek-Harness
+> cleanup. Channel configs on agents/humans are still stored and synced, so a
+> future notification bridge can use them.
 
 ---
 
