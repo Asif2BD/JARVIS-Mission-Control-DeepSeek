@@ -1,6 +1,6 @@
 /**
  * JARVIS Mission Control - CLI Console (v1.3.0)
- * Allows running whitelisted OpenClaw/system commands from the dashboard.
+ * Allows running whitelisted system commands from the dashboard.
  */
 
 const CLI_API = window.API_BASE || '';

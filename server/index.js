@@ -25,12 +25,8 @@ const logger = require('./logger');
 const webhookDelivery = require('./webhook-delivery');
 const ResourceManager = require('./resource-manager');
 const ReviewManager = require('./review-manager');
-const telegramBridge = require('./telegram-bridge');
-const claudeSessions = require('./claude-sessions');
 const cliConnections = require('./cli-connections');
-const openclawSessions = require('./openclaw-sessions');
 const { getEventLogger } = require('./lib/event-logger');
-const { getCostTracker } = require('./lib/cost-tracker');
 
 // Single source of truth for the app version (used in User-Agent headers, /api/update/check, etc.)
 const APP_VERSION = require('../package.json').version;
@@ -1695,8 +1691,6 @@ const resourceManager = new ResourceManager(MISSION_CONTROL_DIR);
 // Initialize Review Manager
 const reviewManager = new ReviewManager(MISSION_CONTROL_DIR);
 
-// Register Telegram bridge routes
-telegramBridge.registerRoutes(app);
 
 // --- CREDENTIALS VAULT ---
 
@@ -1826,7 +1820,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
 // --- COSTS ---
 
 // Filtered ResourceManager cost summary. Lives at /api/costs/summary so it no longer
-// shadows the bare GET /api/costs (served by the cost-tracker the dashboard consumes).
+// shadows the bare GET /api/costs (the stub totals endpoint the dashboard consumes).
 app.get('/api/costs/summary', async (req, res) => {
     try {
         const filters = {
@@ -2126,65 +2120,12 @@ app.post('/api/workflows', async (req, res) => {
     }
 });
 
-// --- SCHEDULES / OPENCLAW CRON SYNC ---
+// --- SCHEDULES ---
 
-// Path to OpenClaw cron jobs
-const OPENCLAW_CRON_FILE = process.env.OPENCLAW_CRON_FILE || 
-    path.join(process.env.HOME || '/root', '.openclaw', 'cron', 'jobs.json');
-
-/**
- * Read OpenClaw cron jobs
- */
-async function readOpenClawCronJobs() {
-    try {
-        const content = await fs.readFile(OPENCLAW_CRON_FILE, 'utf-8');
-        const data = JSON.parse(content);
-        return data.jobs || [];
-    } catch (error) {
-        logger.warn({ err: error.message }, 'Could not read OpenClaw cron jobs');
-        return [];
-    }
-}
-
-/**
- * Convert OpenClaw cron job format to Mission Control queue format
- */
-function convertCronJobToQueueItem(cronJob) {
-    return {
-        id: `openclaw-cron-${cronJob.id || cronJob.name}`,
-        name: cronJob.name || 'Unnamed Job',
-        type: 'cron',
-        schedule: cronJob.schedule || cronJob.cron,
-        status: cronJob.enabled !== false ? 'scheduled' : 'disabled',
-        agent: cronJob.agent || 'system',
-        description: cronJob.description || `OpenClaw cron job`,
-        config: cronJob.config || {},
-        run_count: cronJob.runCount || 0,
-        success_count: cronJob.successCount || 0,
-        last_run: cronJob.lastRun || null,
-        next_run: cronJob.nextRun || null,
-        source: 'openclaw',
-        created_at: cronJob.createdAt || new Date().toISOString(),
-        created_by: cronJob.createdBy || 'system'
-    };
-}
-
-// Get all scheduled jobs (local queue + OpenClaw cron)
+// Get all scheduled jobs (local queue)
 app.get('/api/schedules', async (req, res) => {
     try {
-        // Get local queue items
-        const localQueue = await readJsonDirectory('queue');
-        
-        // Get OpenClaw cron jobs
-        const cronJobs = await readOpenClawCronJobs();
-        const convertedJobs = cronJobs.map(convertCronJobToQueueItem);
-        
-        // Combine and dedupe (local takes precedence)
-        const localIds = new Set(localQueue.map(q => q.id));
-        const combined = [
-            ...localQueue,
-            ...convertedJobs.filter(j => !localIds.has(j.id))
-        ];
+        const combined = await readJsonDirectory('queue');
         
         // Sort by status (running first) then by next_run
         combined.sort((a, b) => {
@@ -2196,28 +2137,6 @@ app.get('/api/schedules', async (req, res) => {
         });
         
         res.json(combined);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Sync OpenClaw cron jobs to local queue
-app.post('/api/schedules/sync', async (req, res) => {
-    try {
-        const cronJobs = await readOpenClawCronJobs();
-        const synced = [];
-        
-        for (const job of cronJobs) {
-            const queueItem = convertCronJobToQueueItem(job);
-            const filePath = `queue/${queueItem.id}.json`;
-            await writeJsonFile(filePath, queueItem);
-            synced.push(queueItem);
-        }
-        
-        await logActivity('system', 'CRON_SYNC', `Synced ${synced.length} jobs from OpenClaw`);
-        broadcast('schedules.synced', { count: synced.length });
-        
-        res.json({ success: true, synced: synced.length, jobs: synced });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -2326,7 +2245,7 @@ app.get('/api/releases/check', async (req, res) => {
 
         try {
             const response = await fetch(
-                'https://api.github.com/repos/Asif2BD/JARVIS-Mission-Control-OpenClaw/releases/latest',
+                'https://api.github.com/repos/Asif2BD/JARVIS-Mission-Control-DeepSeek/releases/latest',
                 {
                     headers: {
                         'User-Agent': `JARVIS-Mission-Control/${current}`,
@@ -2400,145 +2319,6 @@ app.get('/api/metrics', async (req, res) => {
 });
 
 // =====================================
-// Claude Code Session Routes (v1.2.0)
-// =====================================
-
-/**
- * GET /api/claude/sessions
- * List all discovered Claude Code sessions.
- * Query params:
- *   ?active=1   — only return active sessions (last message < 30min ago)
- *   ?project=   — filter by project path substring
- *   ?scan=1     — force an immediate rescan before responding
- */
-app.get('/api/claude/sessions', async (req, res) => {
-    try {
-        if (req.query.scan === '1') {
-            await claudeSessions.scanSessions();
-        }
-        const { sessions, lastScan, claudeHome, projectsDir } = claudeSessions.getCachedSessions();
-
-        let filtered = sessions;
-
-        if (req.query.active === '1') {
-            filtered = filtered.filter(s => s.active);
-        }
-
-        if (req.query.project) {
-            const q = req.query.project.toLowerCase();
-            filtered = filtered.filter(s => s.project && s.project.toLowerCase().includes(q));
-        }
-
-        res.json({
-            sessions: filtered,
-            total: filtered.length,
-            totalAll: sessions.length,
-            activeCount: sessions.filter(s => s.active).length,
-            lastScan,
-            claudeHome,
-            projectsDir,
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * POST /api/claude/sessions
- * Trigger a manual rescan of Claude Code sessions.
- */
-app.post('/api/claude/sessions', async (req, res) => {
-    try {
-        const sessions = await claudeSessions.scanSessions();
-        res.json({
-            ok: true,
-            message: 'Scan complete',
-            total: sessions.length,
-            activeCount: sessions.filter(s => s.active).length,
-            lastScan: new Date().toISOString(),
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =====================================
-// OPENCLAW SESSIONS API (v2.1.0)
-// =====================================
-
-/**
- * GET /api/openclaw/sessions
- * List all discovered OpenClaw gateway sessions across all agents.
- * Query params:
- *   ?active=1   — only return active sessions
- *   ?agent=     — filter by agent name
- *   ?scan=1     — force an immediate rescan before responding
- */
-app.get('/api/openclaw/sessions', async (req, res) => {
-    try {
-        if (req.query.scan === '1') {
-            await openclawSessions.scanSessions();
-        }
-        const { sessions, agents, lastScan, openclawHome } = openclawSessions.getCachedSessions();
-
-        let filtered = sessions;
-
-        if (req.query.active === '1') {
-            filtered = filtered.filter(s => s.active);
-        }
-
-        if (req.query.agent) {
-            const agentFilter = req.query.agent.toLowerCase();
-            filtered = filtered.filter(s => s.agent && s.agent.toLowerCase() === agentFilter);
-        }
-
-        res.json({
-            sessions: filtered,
-            total: filtered.length,
-            totalAll: sessions.length,
-            activeCount: sessions.filter(s => s.active).length,
-            agents,
-            lastScan,
-            openclawHome,
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * POST /api/openclaw/sessions
- * Trigger a manual rescan of OpenClaw sessions.
- */
-app.post('/api/openclaw/sessions', async (req, res) => {
-    try {
-        const sessions = await openclawSessions.scanSessions();
-        res.json({
-            ok: true,
-            message: 'Scan complete',
-            total: sessions.length,
-            activeCount: sessions.filter(s => s.active).length,
-            lastScan: new Date().toISOString(),
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * GET /api/openclaw/stats
- * Get summary statistics for OpenClaw sessions.
- */
-app.get('/api/openclaw/stats', (req, res) => {
-    try {
-        const stats = openclawSessions.getStats();
-        res.json(stats);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =====================================
 // CLI INTEGRATION (v1.3.0)
 // =====================================
 
@@ -2546,10 +2326,6 @@ const { execFile } = require('child_process');
 
 // Whitelist of safe commands that can be triggered from the dashboard
 const CLI_COMMAND_WHITELIST = {
-    'openclaw:status':         { cmd: 'openclaw', args: ['status'] },
-    'openclaw:gateway:status': { cmd: 'openclaw', args: ['gateway', 'status'] },
-    'openclaw:gateway:start':  { cmd: 'openclaw', args: ['gateway', 'start'] },
-    'openclaw:gateway:stop':   { cmd: 'openclaw', args: ['gateway', 'stop'] },
     'system:uptime':           { cmd: 'uptime',   args: [] },
     'system:df':               { cmd: 'df',       args: ['-h', '--output=source,size,used,avail,pcent,target', '-x', 'tmpfs', '-x', 'devtmpfs'] },
     'system:free':             { cmd: 'free',     args: ['-h'] },
@@ -2824,7 +2600,7 @@ function getGithubConfig() {
 // AGENT SOUL WORKSPACE SYNC (v1.5.0)
 // =====================================
 
-const AGENTS_WORKSPACE_DIR = process.env.AGENTS_DIR || '/root/.openclaw/workspace/agents';
+const AGENTS_WORKSPACE_DIR = process.env.AGENTS_DIR || path.join(__dirname, '..', 'agents-workspace');
 const SOUL_FILES = ['SOUL.md', 'MEMORY.md', 'IDENTITY.md'];
 
 /** Validate agentId — only word chars, hyphens, dots */
@@ -3008,37 +2784,18 @@ app.post('/api/events', (req, res) => {
 });
 
 // =====================================
-// COST TRACKING API (v2.0.0)
+// COST TRACKING API
 // =====================================
+// Model usage/cost aggregation is pending the dsh token-meter integration
+// (assistant/message events carry per-step usage). Until then these endpoints
+// serve zeroed totals so the dashboard renders without a cost source.
 
-const costTracker = getCostTracker();
-
-/**
- * GET /api/costs
- * Get all agent costs (today + month)
- */
-app.get('/api/costs', async (req, res) => {
-  try {
-    const costs = await costTracker.getCosts();
-    res.json(costs);
-  } catch (err) {
-    logger.error({ err: err.message }, 'Failed to get costs');
-    res.status(500).json({ error: 'Failed to get costs' });
-  }
+app.get('/api/costs', (req, res) => {
+  res.json({ totals: { todayCost: 0, monthCost: 0 }, agents: [], source: 'none' });
 });
 
-/**
- * GET /api/costs/:agent
- * Get costs for a specific agent
- */
-app.get('/api/costs/:agentId', async (req, res) => {
-  try {
-    const agentCosts = await costTracker.getAgentCosts(req.params.agentId);
-    res.json(agentCosts);
-  } catch (err) {
-    logger.error({ err: err.message }, 'Failed to get agent costs');
-    res.status(500).json({ error: 'Failed to get agent costs' });
-  }
+app.get('/api/costs/:agentId', (req, res) => {
+  res.json({ agentId: req.params.agentId, todayCost: 0, monthCost: 0, source: 'none' });
 });
 
 // =====================================
@@ -3135,7 +2892,7 @@ server.listen(PORT, () => {
             apiKey: process.env.MISSIONDECK_API_KEY,
             clientVersion: '1.0.1',
         });
-        // Pull cloud-created tasks back to local so agents get Telegram notifications
+        // Pull cloud-created tasks back to local so agents get notified
         if (process.env.MISSIONDECK_SLUG) {
             startCloudPull({
                 missionControlDir: MISSION_CONTROL_DIR,
@@ -3145,12 +2902,6 @@ server.listen(PORT, () => {
             });
         }
     }
-
-    // Start Claude Code session scanner
-    claudeSessions.startScanner();
-
-    // Start OpenClaw session scanner
-    openclawSessions.startScanner();
 
     // Init persistent webhook delivery manager
     try {

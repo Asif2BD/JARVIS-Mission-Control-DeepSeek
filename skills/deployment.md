@@ -1,6 +1,6 @@
 # Skill: Deployment
 
-How to deploy OpenClaw agents and make your Mission Control dashboard accessible.
+How to deploy DeepSeek-Harness (dsh) agents and make your Mission Control dashboard accessible.
 
 ---
 
@@ -15,14 +15,14 @@ No SSH. No server setup. No DevOps. The MissionDeck deployment wizard handles ev
 ### Two deployment paths on MissionDeck:
 
 **🌩️ Orgo Cloud** — Managed VM, free tier available
-- MissionDeck provisions a cloud VM, installs OpenClaw, starts your agents
+- MissionDeck provisions a cloud VM, installs the agent runtime, starts your agents
 - Free: 4GB RAM / 4 cores | Starter: 8GB | Pro: 16GB
 - Get Orgo API key at [orgo.host](https://orgo.host/signup?ref=missiondeck)
 
 **🖥️ Bring Your Own Server (BYOS)** — Any Linux VPS or dedicated server
 - Works with DigitalOcean, Hetzner, Vultr, Linode, OVH, bare metal — anything
 - Enter IP + SSH credentials → MissionDeck does the rest automatically
-- Node.js + OpenClaw installed, agents configured, gateway started
+- Node.js + agent runtime installed, agents configured and started
 - AI-assisted error recovery if any step fails
 
 See [MissionDeck API Skill](missiondeck-api.md) for the full deployment walkthrough.

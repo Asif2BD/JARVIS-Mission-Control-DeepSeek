@@ -124,7 +124,7 @@ Format: `TIMESTAMP [ACTOR] ACTION: DESCRIPTION`
 2. **Log all activity** — never skip logging
 3. **Monitor alerts** — address blocked/critical items
 4. **Coordinate agents** — ensure work is distributed
-5. **Sync with channels** — process incoming messages from Telegram/etc.
+5. **Sync with channels** — process incoming messages from connected channels
 
 ---
 

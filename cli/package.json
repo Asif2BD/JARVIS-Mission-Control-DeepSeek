@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node mc.js"
   },
-  "keywords": ["mission-control", "cli", "ai-agents", "openclaw"],
+  "keywords": ["mission-control", "cli", "ai-agents", "deepseek-harness"],
   "author": "Matrix Zion",
   "license": "MIT",
   "engines": {

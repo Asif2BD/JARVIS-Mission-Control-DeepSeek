@@ -36,7 +36,7 @@ Connect a [DeepSeek-Harness](https://github.com/deepseek-ai/deepseek-harness) (`
 cd server && npm install && npm start        # http://localhost:3000
 
 # 2. Install the plugin into your dsh setup
-npm install /path/to/JARVIS-Mission-Control-OpenClaw/integrations/deepseek-harness/dsh-plugin-mission-control
+npm install /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
 
 # 3. Mount it in your dsh profile (cordis.patch.yml or equivalent)
 ```

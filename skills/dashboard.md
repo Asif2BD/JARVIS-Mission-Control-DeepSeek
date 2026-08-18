@@ -20,10 +20,11 @@ The dashboard auto-detects which mode to use. If the API is unreachable, it fall
 ```bash
 cd server
 npm install
-npm start          # Server only
-npm run bridge     # Agent bridge only (requires server running)
-npm run all        # Server + agent bridge together
+npm start          # Start the server (npm run all is an alias)
 ```
+
+The DeepSeek-Harness bridge is not a separate process — it runs inside dsh as
+the `dsh-plugin-mission-control` plugin (see `integrations/deepseek-harness/`).
 
 The server starts at `http://localhost:3000`.
 
@@ -35,7 +36,7 @@ The server starts at `http://localhost:3000`.
 | REST API | `http://localhost:3000/api/*` | CRUD operations |
 | WebSocket | `ws://localhost:3000/ws` | Real-time event stream |
 | File Watcher | — | Auto-detects JSON file changes |
-| Agent Bridge | — | Monitors OpenClaw sessions, auto-creates tasks |
+| dsh Bridge | — | Plugin inside DeepSeek-Harness mirrors sessions to the board |
 
 ### How It Works
 
