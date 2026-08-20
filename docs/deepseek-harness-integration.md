@@ -93,22 +93,24 @@ The plugin is deliberately defensive about the preview-stage API:
 ### Installing into dsh
 
 ```bash
-# From a dsh checkout or any dsh profile:
-npm install /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
+# Install the published bundle into a dsh profile. The dsh.bundle manifest
+# activates the Cordis patch automatically.
+npx @deepseek-ai/dsh@0.1.0-rc.7 plugin --profile web add dsh-plugin-mission-control
 ```
 
-Then mount it in your dsh profile/bundle config (YAML patch shown; adjust to your profile layout):
+To override the defaults, address the installed row from the profile's
+`cordis.patch.yml`:
 
 ```yaml
 # cordis.patch.yml
-- name: dsh-plugin-mission-control
+- id: mission-control
   config:
     missionControlUrl: http://localhost:3000
     agentId: agent-dsh
     agentName: DeepSeek Harness
 ```
 
-Verify composition with `dsh --profile web --dump-config`, then run a session and watch tasks appear on the Mission Control board at `http://localhost:3000`.
+Verify composition with `npx @deepseek-ai/dsh@0.1.0-rc.7 --profile web --dump-config`, then run a session and watch tasks appear on the Mission Control board at `http://localhost:3000`.
 
 ## 5. The Fork Happened — You're In It
 

@@ -46,16 +46,11 @@ cd JARVIS-Mission-Control-DeepSeek
 # 2. Start the Mission Control server + dashboard
 cd server && npm install && npm start        # → http://localhost:3000
 
-# 3. Install the bridge plugin into your dsh environment
-npm install ./integrations/deepseek-harness/dsh-plugin-mission-control
+# 3. Install the bridge into the web profile. The dsh.bundle manifest
+#    activates it automatically; no hand-written Cordis row is required.
+npx @deepseek-ai/dsh@0.1.0-rc.7 plugin --profile web add dsh-plugin-mission-control
 
-# 4. Mount it in your dsh profile (cordis.patch.yml or equivalent)
-#    - name: dsh-plugin-mission-control
-#      config:
-#        missionControlUrl: http://localhost:3000
-#        agentId: agent-dsh
-
-# 5. Run DeepSeek-Harness
+# 4. Run DeepSeek-Harness
 npx @deepseek-ai/dsh web                     # → http://127.0.0.1:3080
 ```
 
@@ -96,7 +91,7 @@ This project began as a port of [JARVIS Mission Control](https://github.com/Asif
 
 1. Live end-to-end validation with a real `DEEPSEEK_API_KEY`
 2. dsh-native cost tracking (per-step `usage` from `assistant/message` events → the dashboard cost cards)
-3. Publish `dsh-plugin-mission-control` to npm with the `dsh-plugin` topic + CI against a pinned dsh release
+3. Track new dsh preview releases with a compatibility canary and configurable event mappings
 
 ## License
 
