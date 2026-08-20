@@ -7,8 +7,9 @@ Validated against `@deepseek-ai/dsh@0.1.0-rc.7` — both the shipped type defini
 ## Install
 
 ```bash
-# Into a dsh profile — the plugin self-activates via its dsh.bundle declaration
-npx dsh plugin --profile web add dsh-plugin-mission-control
+# Into a dsh profile — the plugin self-activates via its dsh.bundle declaration.
+# Pin the currently validated dsh preview, or use `dsh plugin ...` if already installed.
+npx @deepseek-ai/dsh@0.1.0-rc.7 plugin --profile web add dsh-plugin-mission-control
 
 # Point it at your board (defaults shown)
 export MISSION_CONTROL_URL=http://localhost:3000

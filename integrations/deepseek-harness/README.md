@@ -37,7 +37,7 @@ cd server && npm install && npm start        # http://localhost:3000
 
 # 2. Install the plugin into your dsh profile — it self-activates via its
 #    dsh.bundle declaration, no manual config rows needed
-npx dsh plugin --profile web add /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
+npx @deepseek-ai/dsh@0.1.0-rc.7 plugin --profile web add /path/to/JARVIS-Mission-Control-DeepSeek/integrations/deepseek-harness/dsh-plugin-mission-control
 
 # 3. (Optional) point it somewhere else via environment variables
 export MISSION_CONTROL_URL=http://localhost:3000   # default
